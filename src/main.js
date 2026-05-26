@@ -7,7 +7,7 @@ let mainWindow;
 let tray;
 
 const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 144;
+const WINDOW_HEIGHT = 124;
 
 function statePath() {
   return path.join(app.getPath('userData'), 'window-state.json');
@@ -18,8 +18,8 @@ function readWindowState() {
     const state = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
     return {
       ...state,
-      width: Math.max(state.width || 0, WINDOW_WIDTH),
-      height: Math.max(state.height || 0, WINDOW_HEIGHT)
+      width: WINDOW_WIDTH,
+      height: WINDOW_HEIGHT
     };
   } catch {
     return null;
