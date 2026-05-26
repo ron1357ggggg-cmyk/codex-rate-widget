@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log*
+dist/
+out/
+*.log
+
+# Local Electron/runtime state
+*.asar
+.env
+.DS_Store
+Thumbs.db
