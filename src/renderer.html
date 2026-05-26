@@ -19,8 +19,42 @@
           <button id="hide" title="隱藏到系統列" type="button">×</button>
         </div>
       </header>
+
       <section id="limits" class="limits" aria-live="polite">
         <div class="empty">讀取中</div>
+      </section>
+
+      <section id="observer" class="observer" aria-live="polite">
+        <div class="observer-row">
+          <span>今日消耗</span>
+          <strong id="today-usage">5h -0% / 週 -0%</strong>
+        </div>
+        <div class="observer-row">
+          <span>今日節省</span>
+          <strong id="saved-time">0m</strong>
+        </div>
+        <div class="observer-row">
+          <span>等效價值</span>
+          <strong id="saved-money">NT$0</strong>
+        </div>
+        <div class="observer-row">
+          <span>燃燒率</span>
+          <strong id="burn-rate">0%/hr</strong>
+        </div>
+        <div class="observer-row">
+          <span>預估可用</span>
+          <strong id="remaining-hours">--</strong>
+        </div>
+        <div class="observer-row status-row">
+          <span>狀態</span>
+          <strong id="risk-status" class="risk-normal">效率良好</strong>
+          <button id="reset-observer" class="reset-observer" title="重置本次觀測" type="button">↺</button>
+        </div>
+        <div class="observer-actions">
+          <button id="toggle-events" class="events-toggle" type="button" aria-expanded="false">紀錄</button>
+        </div>
+        <div id="recent-events" class="recent-events" hidden></div>
+        <div id="heatmap" class="heatmap" aria-label="最近 7 天使用熱力圖"></div>
       </section>
     </main>
     <script src="./renderer.js"></script>
