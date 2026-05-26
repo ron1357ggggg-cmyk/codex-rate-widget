@@ -12,7 +12,12 @@ function statePath() {
 
 function readWindowState() {
   try {
-    return JSON.parse(fs.readFileSync(statePath(), 'utf8'));
+    const state = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
+    return {
+      ...state,
+      width: Math.max(state.width || 0, 276),
+      height: Math.max(state.height || 0, 124)
+    };
   } catch {
     return null;
   }
@@ -28,8 +33,8 @@ function saveWindowState() {
 function defaultBounds() {
   const display = screen.getPrimaryDisplay();
   const workArea = display.workArea;
-  const width = 240;
-  const height = 116;
+  const width = 276;
+  const height = 124;
   return {
     width,
     height,
@@ -44,8 +49,8 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     ...bounds,
-    minWidth: 220,
-    minHeight: 98,
+    minWidth: 276,
+    minHeight: 124,
     maxWidth: 320,
     maxHeight: 180,
     frame: false,

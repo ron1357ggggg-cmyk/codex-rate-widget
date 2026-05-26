@@ -16,7 +16,7 @@ body {
 .widget {
   width: 100vw;
   height: 100vh;
-  padding: 10px 12px 8px;
+  padding: 10px 14px 9px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: rgba(27, 29, 33, 0.94);
@@ -35,7 +35,7 @@ body {
 .titlebar {
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
 }
 
 .brand {
@@ -44,6 +44,8 @@ body {
   font-size: 13px;
   font-weight: 700;
   color: #f1f5f9;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .gauge {
@@ -92,15 +94,16 @@ button:hover {
 
 .limits {
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .limit-row {
   display: grid;
-  grid-template-columns: 48px 1fr 38px 58px;
-  gap: 8px;
+  grid-template-columns: 48px minmax(58px, 1fr) 38px 64px;
+  gap: 9px;
   min-height: 22px;
   font-size: 13px;
+  align-items: center;
 }
 
 .label {
@@ -149,8 +152,10 @@ button:hover {
 }
 
 .updated {
-  margin-top: 8px;
+  margin-top: 9px;
+  min-height: 13px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .empty {
