@@ -6,6 +6,9 @@ const { readLatestRateLimits } = require('./rateLimits');
 let mainWindow;
 let tray;
 
+const WINDOW_WIDTH = 320;
+const WINDOW_HEIGHT = 144;
+
 function statePath() {
   return path.join(app.getPath('userData'), 'window-state.json');
 }
@@ -15,8 +18,8 @@ function readWindowState() {
     const state = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
     return {
       ...state,
-      width: Math.max(state.width || 0, 276),
-      height: Math.max(state.height || 0, 124)
+      width: Math.max(state.width || 0, WINDOW_WIDTH),
+      height: Math.max(state.height || 0, WINDOW_HEIGHT)
     };
   } catch {
     return null;
@@ -33,8 +36,8 @@ function saveWindowState() {
 function defaultBounds() {
   const display = screen.getPrimaryDisplay();
   const workArea = display.workArea;
-  const width = 276;
-  const height = 124;
+  const width = WINDOW_WIDTH;
+  const height = WINDOW_HEIGHT;
   return {
     width,
     height,
@@ -43,16 +46,32 @@ function defaultBounds() {
   };
 }
 
+function fitBoundsToScreen(bounds) {
+  const display = screen.getPrimaryDisplay();
+  const workArea = display.workArea;
+  const width = Math.max(bounds.width || 0, WINDOW_WIDTH);
+  const height = Math.max(bounds.height || 0, WINDOW_HEIGHT);
+  const maxX = workArea.x + workArea.width - width - 14;
+  const maxY = workArea.y + workArea.height - height - 12;
+
+  return {
+    width,
+    height,
+    x: Math.min(Math.max(bounds.x ?? maxX, workArea.x + 14), maxX),
+    y: Math.min(Math.max(bounds.y ?? maxY, workArea.y + 12), maxY)
+  };
+}
+
 function createWindow() {
   const saved = readWindowState();
-  const bounds = saved || defaultBounds();
+  const bounds = fitBoundsToScreen(saved || defaultBounds());
 
   mainWindow = new BrowserWindow({
     ...bounds,
-    minWidth: 276,
-    minHeight: 124,
-    maxWidth: 320,
-    maxHeight: 180,
+    minWidth: WINDOW_WIDTH,
+    minHeight: WINDOW_HEIGHT,
+    maxWidth: 380,
+    maxHeight: 220,
     frame: false,
     transparent: true,
     resizable: false,
