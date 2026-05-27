@@ -7,7 +7,7 @@ let mainWindow;
 let tray;
 
 const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 250;
+const WINDOW_HEIGHT = 150;
 
 function statePath() {
   return path.join(app.getPath('userData'), 'window-state.json');
@@ -71,7 +71,7 @@ function createWindow() {
     minWidth: WINDOW_WIDTH,
     minHeight: WINDOW_HEIGHT,
     maxWidth: 380,
-    maxHeight: 300,
+    maxHeight: 180,
     frame: false,
     transparent: true,
     resizable: false,
