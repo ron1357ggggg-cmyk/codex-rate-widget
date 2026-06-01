@@ -190,7 +190,7 @@ function render(data) {
     minute: '2-digit',
     second: '2-digit',
     hour12: false
-  }).format(updated)}`;
+  }).format(checked)}`;
   renderValue(events);
 }
 

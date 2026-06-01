@@ -70,3 +70,14 @@
 ### Verification
 
 - Restarted the Electron widget after applying the renderer refresh guard.
+
+## 2026-06-01 Refresh Failure Regression Fix
+
+### Changed
+
+- Fixed a renderer variable typo that caused successful refresh data to render as a failure state.
+
+### Verification
+
+- Ran `node --check src/renderer.js`.
+- Ran the rate-limit reader directly and confirmed it returned current remaining percentages.

@@ -91,3 +91,21 @@ Manual refresh now races the IPC request against a five-second timeout, logs fai
 ### Verification
 
 Restarted the Electron widget after applying the renderer refresh guard.
+
+## 2026-06-01 Refresh Shows Failure After Successful Read
+
+### Symptom
+
+The widget showed the refresh failure state even though the local rate-limit reader returned fresh Codex usage data.
+
+### Cause
+
+A renderer variable was renamed from `updated` to `checked`, but the formatter still referenced `updated`, causing a `ReferenceError` during render.
+
+### Resolution
+
+The formatter now uses the `checked` date value when rendering the titlebar check time.
+
+### Verification
+
+Ran `node --check src/renderer.js` and verified the rate-limit reader returned current remaining percentages.
