@@ -37,3 +37,21 @@
 ## 注意事項
 
 每次查詢、分析或修改後，若產生可重用結論，必須回寫到本文件或其他對應 docs 文件。修改後也必須提醒使用者提交 Git。
+
+## 2026-06-01 Rate Limit Stale Display
+
+### Symptom
+
+The widget could show an older-looking rate-limit state after restart because it selected the first session file with rate-limit data instead of comparing event timestamps.
+
+### Cause
+
+Codex can append fresh rate-limit events to a session log whose path or file grouping looks older. Sorting files alone can therefore pick stale data.
+
+### Resolution
+
+The reader now compares rate-limit event timestamps across active and archived session logs, then renders the newest event. The start script also launches Electron directly so the command window does not need to remain open.
+
+### Verification
+
+Ran the reader directly with Node and confirmed it returned a 2026-06-01 timestamp.

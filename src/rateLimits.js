@@ -4,6 +4,7 @@ const os = require('os');
 
 const CODEX_DIR = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
 const SESSIONS_DIR = path.join(CODEX_DIR, 'sessions');
+const ARCHIVED_SESSIONS_DIR = path.join(CODEX_DIR, 'archived_sessions');
 
 async function collectJsonlFiles(dir, result = []) {
   let entries;
@@ -67,9 +68,15 @@ function clamp(value, min, max) {
 }
 
 async function readLatestRateLimits() {
-  const files = (await collectJsonlFiles(SESSIONS_DIR))
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)
-    .slice(0, 25);
+  const files = (
+    await Promise.all([
+      collectJsonlFiles(SESSIONS_DIR),
+      collectJsonlFiles(ARCHIVED_SESSIONS_DIR)
+    ])
+  )
+    .flat()
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  let latest = null;
 
   for (const file of files) {
     let text;
@@ -84,16 +91,26 @@ async function readLatestRateLimits() {
         const event = JSON.parse(line);
         const rateLimits = event?.payload?.rate_limits || event?.rate_limits;
         if (rateLimits) {
-          return {
-            ok: true,
-            ...normalizeRateLimits(rateLimits, file.path, event.timestamp)
-          };
+          const eventTime = Date.parse(event.timestamp || '');
+          const timestampMs = Number.isFinite(eventTime) ? eventTime : file.mtimeMs;
+          if (!latest || timestampMs > latest.timestampMs) {
+            latest = {
+              timestampMs,
+              data: {
+                ok: true,
+                ...normalizeRateLimits(rateLimits, file.path, event.timestamp)
+              }
+            };
+          }
+          break;
         }
       } catch {
         // Ignore partial or malformed session lines.
       }
     }
   }
+
+  if (latest) return latest.data;
 
   return {
     ok: false,

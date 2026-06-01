@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-npm.cmd start
+start "" "%~dp0node_modules\electron\dist\electron.exe" .
