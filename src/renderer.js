@@ -207,10 +207,23 @@ async function refresh() {
   refreshBtn.disabled = true;
   updatedEl.textContent = '檢查中';
   try {
-    render(await window.codexRateWidget.getRateLimits());
+    const data = await withTimeout(window.codexRateWidget.getRateLimits(), 5000);
+    render(data);
+  } catch (error) {
+    console.error('Failed to refresh rate limits', error);
+    updatedEl.textContent = '檢查失敗';
   } finally {
     refreshBtn.disabled = false;
   }
+}
+
+function withTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Refresh timed out')), timeoutMs);
+    })
+  ]);
 }
 
 refreshBtn.addEventListener('click', refresh);

@@ -73,3 +73,21 @@ The rate-limit reader now returns `checkedAt`, and the renderer shows that check
 ### Verification
 
 Ran the rate-limit reader directly with Node and confirmed `checkedAt` updates independently of the newest source event timestamp.
+
+## 2026-06-01 Refresh Stuck On Checking
+
+### Symptom
+
+The widget titlebar could remain on the checking state after pressing refresh.
+
+### Cause
+
+The renderer set the checking label before awaiting the refresh result, but did not handle rejected or stalled refresh promises with a visible fallback state.
+
+### Resolution
+
+Manual refresh now races the IPC request against a five-second timeout, logs failures, displays a failure state, and always re-enables the refresh button.
+
+### Verification
+
+Restarted the Electron widget after applying the renderer refresh guard.

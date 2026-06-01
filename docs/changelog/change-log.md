@@ -60,3 +60,13 @@
 ### Verification
 
 - Ran the rate-limit reader directly with Node and confirmed it now includes `checkedAt`.
+
+## 2026-06-01 Refresh Hang Guard
+
+### Changed
+
+- Add a five-second timeout and error state to manual refresh so the titlebar cannot remain stuck on the checking message.
+
+### Verification
+
+- Restarted the Electron widget after applying the renderer refresh guard.
