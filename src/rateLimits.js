@@ -68,6 +68,7 @@ function clamp(value, min, max) {
 }
 
 async function readLatestRateLimits() {
+  const checkedAt = new Date().toISOString();
   const files = (
     await Promise.all([
       collectJsonlFiles(SESSIONS_DIR),
@@ -98,6 +99,7 @@ async function readLatestRateLimits() {
               timestampMs,
               data: {
                 ok: true,
+                checkedAt,
                 ...normalizeRateLimits(rateLimits, file.path, event.timestamp)
               }
             };
@@ -114,7 +116,8 @@ async function readLatestRateLimits() {
 
   return {
     ok: false,
-    updatedAt: new Date().toISOString(),
+    checkedAt,
+    updatedAt: checkedAt,
     sourcePath: SESSIONS_DIR,
     windows: [],
     message: '尚未在 Codex session 裡找到 rate_limits。使用一次 Codex 後會自動更新。'

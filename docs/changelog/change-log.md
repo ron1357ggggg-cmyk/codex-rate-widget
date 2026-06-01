@@ -49,3 +49,14 @@
 ### Verification
 
 - Ran the rate-limit reader directly with Node and confirmed it returned a 2026-06-01 rate-limit event.
+
+## 2026-06-01 Refresh Feedback Update
+
+### Changed
+
+- Show the latest manual/automatic check time in the widget titlebar so pressing refresh has visible feedback even when Codex has not emitted a newer rate-limit event.
+- Disable the refresh button while a refresh request is in flight.
+
+### Verification
+
+- Ran the rate-limit reader directly with Node and confirmed it now includes `checkedAt`.

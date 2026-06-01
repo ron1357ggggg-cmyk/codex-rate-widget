@@ -55,3 +55,21 @@ The reader now compares rate-limit event timestamps across active and archived s
 ### Verification
 
 Ran the reader directly with Node and confirmed it returned a 2026-06-01 timestamp.
+
+## 2026-06-01 Refresh Button Appears Inactive
+
+### Symptom
+
+Clicking refresh could appear to do nothing when the newest Codex rate-limit event had not changed.
+
+### Cause
+
+The widget titlebar displayed the source event timestamp, not the time when the widget last checked local session logs. If the same source event remained newest, the rendered time and percentages were unchanged.
+
+### Resolution
+
+The rate-limit reader now returns `checkedAt`, and the renderer shows that check time. The refresh button is disabled while the request is running and briefly shows a checking state.
+
+### Verification
+
+Ran the rate-limit reader directly with Node and confirmed `checkedAt` updates independently of the newest source event timestamp.

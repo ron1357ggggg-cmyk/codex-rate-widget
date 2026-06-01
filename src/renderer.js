@@ -184,8 +184,8 @@ function render(data) {
     })
     .join('');
 
-  const updated = new Date(data.updatedAt);
-  updatedEl.textContent = `更新 ${new Intl.DateTimeFormat('zh-TW', {
+  const checked = new Date(data.checkedAt || data.updatedAt);
+  updatedEl.textContent = `檢查 ${new Intl.DateTimeFormat('zh-TW', {
     hour: 'numeric',
     minute: '2-digit',
     second: '2-digit',
@@ -204,7 +204,13 @@ function escapeHtml(value) {
 }
 
 async function refresh() {
-  render(await window.codexRateWidget.getRateLimits());
+  refreshBtn.disabled = true;
+  updatedEl.textContent = '檢查中';
+  try {
+    render(await window.codexRateWidget.getRateLimits());
+  } finally {
+    refreshBtn.disabled = false;
+  }
 }
 
 refreshBtn.addEventListener('click', refresh);
