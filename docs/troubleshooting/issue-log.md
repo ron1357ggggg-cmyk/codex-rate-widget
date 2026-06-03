@@ -109,3 +109,21 @@ The formatter now uses the `checked` date value when rendering the titlebar chec
 ### Verification
 
 Ran `node --check src/renderer.js` and verified the rate-limit reader returned current remaining percentages.
+
+## 2026-06-03 Duplicate Widget Instances
+
+### Symptom
+
+The widget could appear broken or inconsistent when the desktop shortcut was opened more than once.
+
+### Cause
+
+The app did not enforce a single Electron instance, so multiple widget processes could run at the same time and share the same user-data directory and tray behavior.
+
+### Resolution
+
+The app now uses Electron's single-instance lock. A second launch exits immediately after asking the existing instance to show/focus and refresh.
+
+### Verification
+
+Launched the widget twice after restart and confirmed only one Electron app instance remained.

@@ -81,3 +81,14 @@
 
 - Ran `node --check src/renderer.js`.
 - Ran the rate-limit reader directly and confirmed it returned current remaining percentages.
+
+## 2026-06-03 Single Instance Update
+
+### Changed
+
+- Added an Electron single-instance lock so launching the desktop shortcut again focuses the existing widget instead of opening a duplicate copy.
+
+### Verification
+
+- Ran JavaScript syntax checks for main, renderer, and rate-limit modules.
+- Restarted the widget and launched it twice; only one Electron app instance remained.

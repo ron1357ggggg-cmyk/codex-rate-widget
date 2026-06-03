@@ -8,6 +8,9 @@ let tray;
 
 const WINDOW_WIDTH = 320;
 const WINDOW_HEIGHT = 150;
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) app.quit();
 
 function statePath() {
   return path.join(app.getPath('userData'), 'window-state.json');
@@ -139,6 +142,12 @@ function toggleWindow() {
   }
 }
 
+function showWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 async function pushRateLimits() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const data = await readLatestRateLimits();
@@ -152,12 +161,19 @@ ipcMain.on('window:quit', () => {
   app.quit();
 });
 
-app.whenReady().then(() => {
-  createWindow();
-  createTray();
-  pushRateLimits();
-  setInterval(pushRateLimits, 30_000);
-});
+if (hasSingleInstanceLock) {
+  app.on('second-instance', () => {
+    showWindow();
+    pushRateLimits();
+  });
+
+  app.whenReady().then(() => {
+    createWindow();
+    createTray();
+    pushRateLimits();
+    setInterval(pushRateLimits, 30_000);
+  });
+}
 
 app.on('before-quit', () => {
   app.isQuitting = true;
