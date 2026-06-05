@@ -5,6 +5,7 @@ const os = require('os');
 const CODEX_DIR = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
 const SESSIONS_DIR = path.join(CODEX_DIR, 'sessions');
 const ARCHIVED_SESSIONS_DIR = path.join(CODEX_DIR, 'archived_sessions');
+const STALE_AFTER_MS = 45 * 60 * 1000;
 
 async function collectJsonlFiles(dir, result = []) {
   let entries;
@@ -68,7 +69,8 @@ function clamp(value, min, max) {
 }
 
 async function readLatestRateLimits() {
-  const checkedAt = new Date().toISOString();
+  const checkedAtMs = Date.now();
+  const checkedAt = new Date(checkedAtMs).toISOString();
   const files = (
     await Promise.all([
       collectJsonlFiles(SESSIONS_DIR),
@@ -95,11 +97,16 @@ async function readLatestRateLimits() {
           const eventTime = Date.parse(event.timestamp || '');
           const timestampMs = Number.isFinite(eventTime) ? eventTime : file.mtimeMs;
           if (!latest || timestampMs > latest.timestampMs) {
+            const sourceEventAgeMs = Math.max(0, checkedAtMs - timestampMs);
             latest = {
               timestampMs,
               data: {
                 ok: true,
                 checkedAt,
+                sourceType: 'codex-session-jsonl',
+                sourceEventAgeMs,
+                stale: sourceEventAgeMs > STALE_AFTER_MS,
+                staleAfterMs: STALE_AFTER_MS,
                 ...normalizeRateLimits(rateLimits, file.path, event.timestamp)
               }
             };
@@ -120,8 +127,10 @@ async function readLatestRateLimits() {
     updatedAt: checkedAt,
     sourcePath: SESSIONS_DIR,
     windows: [],
+    stale: true,
+    staleAfterMs: STALE_AFTER_MS,
     message: '尚未在 Codex session 裡找到 rate_limits。使用一次 Codex 後會自動更新。'
   };
 }
 
-module.exports = { readLatestRateLimits };
+module.exports = { readLatestRateLimits, STALE_AFTER_MS };

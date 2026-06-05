@@ -127,3 +127,28 @@ The app now uses Electron's single-instance lock. A second launch exits immediat
 ### Verification
 
 Launched the widget twice after restart and confirmed only one Electron app instance remained.
+
+## 2026-06-05 Source Freshness Diagnostics
+
+### Symptom
+
+The widget can appear to stop updating every few days or remain stuck on a specific timestamp, while Codex Desktop still shows current remaining usage.
+
+### Cause
+
+The widget reads local Codex session `.jsonl` snapshots. It does not query Codex servers or the desktop app's internal live state. Codex rate-limit snapshots are emitted into session logs after Codex activity. If no fresh local `rate_limits` event is written, the widget cannot calculate the exact current rolling-window remaining usage by itself.
+
+Related findings:
+
+- A currently active thread can keep appending to an older path such as `sessions\2026\05\28\...jsonl`, so file path dates are not freshness signals.
+- `state_5.sqlite` tracks thread paths and updated times, but does not store a clean rate-limit state.
+- `logs_2.sqlite` has token-related traces, but not a stable standalone `rate_limits` payload suitable as the widget source.
+- `.codex-global-state.json` does not contain `rate_limits`, `used_percent`, or `resets_at`.
+
+### Resolution
+
+The widget now reports source freshness explicitly with `sourceEventAgeMs` and marks data stale after 45 minutes. Stale/error refreshes are written to `%APPDATA%\codex-rate-widget\diagnostics.jsonl`. Future repairs must start from `docs/rate-limit-widget-quick-index.md` and this issue log.
+
+### Verification
+
+The direct reader returned a fresh 2026-06-05 `codex-session-jsonl` snapshot with 5-hour and weekly windows, and `stale: false`.

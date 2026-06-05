@@ -26,6 +26,27 @@ function formatResetTime(ms) {
   }).format(date);
 }
 
+function formatClock(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '--:--:--';
+  return new Intl.DateTimeFormat('zh-TW', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(date);
+}
+
+function formatAge(ms) {
+  if (!Number.isFinite(ms)) return '未知';
+  const minutes = Math.max(0, Math.round(ms / 60_000));
+  if (minutes < 1) return '剛剛';
+  if (minutes < 60) return `${minutes} 分鐘前`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} 小時 ${rest} 分前` : `${hours} 小時前`;
+}
+
 function toneFor(percent) {
   if (percent <= 15) return 'danger';
   if (percent <= 35) return 'warn';
@@ -162,7 +183,7 @@ function render(data) {
   const events = recordUsageEvent(data);
 
   if (!data?.ok || !data.windows?.length) {
-    limitsEl.innerHTML = `<div class="empty">${escapeHtml(data?.message || '沒有資料')}</div>`;
+    limitsEl.innerHTML = `<div class="empty">${escapeHtml(data?.message || '沒有可用資料')}</div>`;
     updatedEl.textContent = '';
     renderValue(events);
     return;
@@ -174,7 +195,7 @@ function render(data) {
       return `
         <div class="limit-row ${tone}">
           <div class="label">${escapeHtml(item.label)}</div>
-          <div class="meter" title="已使用 ${Math.round(item.usedPercent)}%">
+          <div class="meter" title="已用 ${Math.round(item.usedPercent)}%">
             <span style="width:${item.remainingPercent}%"></span>
           </div>
           <div class="percent">${item.remainingPercent}%</div>
@@ -184,13 +205,15 @@ function render(data) {
     })
     .join('');
 
-  const checked = new Date(data.checkedAt || data.updatedAt);
-  updatedEl.textContent = `檢查 ${new Intl.DateTimeFormat('zh-TW', {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(checked)}`;
+  const checkedText = formatClock(data.checkedAt || data.updatedAt);
+  const sourceAge = formatAge(Number(data.sourceEventAgeMs));
+  updatedEl.textContent = data.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
+  updatedEl.title = [
+    `來源：${data.sourceType || 'unknown'}`,
+    `事件：${data.updatedAt || '--'}`,
+    `路徑：${data.sourcePath || '--'}`,
+    data.stale ? '狀態：Codex 尚未寫出新的 rate_limits snapshot' : '狀態：資料新鮮'
+  ].join('\n');
   renderValue(events);
 }
 

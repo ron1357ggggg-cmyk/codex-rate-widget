@@ -92,3 +92,19 @@
 
 - Ran JavaScript syntax checks for main, renderer, and rate-limit modules.
 - Restarted the widget and launched it twice; only one Electron app instance remained.
+
+## 2026-06-05 Source Freshness Diagnostics
+
+### Changed
+
+- Added `docs/rate-limit-widget-quick-index.md` as the mandatory first-read checklist for future repairs.
+- Added `docs/troubleshooting/rate-limit-widget-error-log.md` as a focused recurring widget failure log.
+- Added source freshness metadata to rate-limit reads: `sourceType`, `sourceEventAgeMs`, `stale`, and `staleAfterMs`.
+- The renderer now shows stale source age when Codex has not written a recent local `rate_limits` snapshot.
+- The main process writes stale/error diagnostics to `%APPDATA%\codex-rate-widget\diagnostics.jsonl`.
+- Cleaned corrupted UI/source strings in `rateLimits.js` and `renderer.js`.
+
+### Verification
+
+- Ran `node --check src\main.js`, `node --check src\renderer.js`, and `node --check src\rateLimits.js`.
+- Ran the rate-limit reader directly and confirmed it returned a 2026-06-05 snapshot with `stale: false`.

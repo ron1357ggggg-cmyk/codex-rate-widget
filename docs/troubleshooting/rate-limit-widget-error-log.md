@@ -1,0 +1,28 @@
+# Rate Limit Widget Error Log
+
+Use this focused log for recurring widget failures. Add a new entry every time the widget is repaired.
+
+## 2026-06-05 Stale Snapshot Recurrence
+
+Symptom:
+
+- The widget appears to stop updating after a few days or stays on a specific timestamp.
+
+Observed:
+
+- Direct reader check returned a fresh local `rate_limits` event at `2026-06-05T06:17:19.615Z`.
+- The current active Codex thread can be stored in an older path such as `sessions\2026\05\28\...jsonl`, so path dates are misleading.
+- Codex rate limits are currently read from local session snapshots only. The widget does not call Codex's backend or the desktop app's internal live state.
+
+Root direction:
+
+- Treat the source event timestamp as the only trustworthy freshness signal.
+- Show stale state when Codex has not written a recent local snapshot.
+- Persist stale/error diagnostics so the next repair starts with facts.
+
+Change direction:
+
+- Added source freshness metadata in `readLatestRateLimits()`.
+- Added stale display in the renderer.
+- Added `%APPDATA%\codex-rate-widget\diagnostics.jsonl` logging for stale/error refreshes.
+- Added `docs/rate-limit-widget-quick-index.md` as the mandatory first-read checklist.

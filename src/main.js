@@ -150,11 +150,49 @@ function showWindow() {
 
 async function pushRateLimits() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const data = await readLatestRateLimits();
+  const data = await loadRateLimitsWithDiagnostics();
   mainWindow.webContents.send('rate-limits', data);
+  return data;
 }
 
-ipcMain.handle('rate-limits:get', () => readLatestRateLimits());
+async function loadRateLimitsWithDiagnostics() {
+  try {
+    const data = await readLatestRateLimits();
+    if (!data.ok || data.stale) writeDiagnostic('rate-limit-refresh-warning', data);
+    return data;
+  } catch (error) {
+    const data = {
+      ok: false,
+      checkedAt: new Date().toISOString(),
+      windows: [],
+      message: '讀取 Codex rate_limits 時發生錯誤。'
+    };
+    writeDiagnostic('rate-limit-refresh-error', {
+      message: error?.message || String(error),
+      stack: error?.stack || null
+    });
+    return data;
+  }
+}
+
+function writeDiagnostic(type, payload) {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'diagnostics.jsonl');
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.appendFileSync(
+      logPath,
+      `${JSON.stringify({
+        timestamp: new Date().toISOString(),
+        type,
+        payload
+      })}\n`
+    );
+  } catch {
+    // Diagnostics must never break the widget.
+  }
+}
+
+ipcMain.handle('rate-limits:get', () => loadRateLimitsWithDiagnostics());
 ipcMain.on('window:hide', () => mainWindow?.hide());
 ipcMain.on('window:quit', () => {
   app.isQuitting = true;
