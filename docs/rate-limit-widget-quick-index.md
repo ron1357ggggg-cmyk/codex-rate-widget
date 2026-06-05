@@ -22,6 +22,30 @@ node -e "require('./src/rateLimits').readLatestRateLimits().then(x=>console.log(
 
 PowerShell note: do not use bash heredocs or `&&`. Run commands separately or use PowerShell-native syntax.
 
+## Git Rule
+
+Every completed modification must be committed and pushed automatically unless the user explicitly says not to use Git.
+
+This applies to all repository changes, including:
+
+- Source code
+- Documentation
+- Troubleshooting logs
+- Rules/checklists
+- Scripts such as `start-widget.cmd`
+
+Required close-out steps:
+
+```powershell
+git status --short --branch
+git add <changed-files>
+git commit -m "<type>: <short summary>"
+git push origin main
+git status --short --branch
+```
+
+Do not leave completed edits only in the working tree. If verification fails, fix or clearly record the blocker before committing.
+
 ## Runtime Diagnostic Log
 
 The widget writes refresh warnings/errors here:

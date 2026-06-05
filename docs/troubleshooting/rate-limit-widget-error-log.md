@@ -2,6 +2,12 @@
 
 Use this focused log for recurring widget failures. Add a new entry every time the widget is repaired.
 
+Global repair rule:
+
+- Every completed modification must be staged, committed, and pushed to Git automatically unless the user explicitly says not to use Git.
+- This includes documentation-only repairs and rule updates.
+- Before editing, read `docs/rate-limit-widget-quick-index.md` and the exact file being changed.
+
 ## 2026-06-05 Stale Snapshot Recurrence
 
 Symptom:

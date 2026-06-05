@@ -108,3 +108,14 @@
 
 - Ran `node --check src\main.js`, `node --check src\renderer.js`, and `node --check src\rateLimits.js`.
 - Ran the rate-limit reader directly and confirmed it returned a 2026-06-05 snapshot with `stale: false`.
+
+## 2026-06-05 Git Automation Rule
+
+### Changed
+
+- Added a mandatory rule that every completed repository modification must be staged, committed, and pushed automatically unless the user explicitly opts out.
+- Clarified that the rule applies to source, docs, troubleshooting logs, checklists, and scripts.
+
+### Verification
+
+- Updated the quick index and focused widget error log.
