@@ -26,3 +26,7 @@ npm.cmd start
 ```
 
 並從最新的 `.jsonl` 事件中讀取 `rate_limits`。Codex 需要至少跑過一次並產生 token/rate limit 事件，畫面才會有真實資料。
+
+## 跨設備注意
+
+目前小工具預設只讀本機 Codex session。若 Codex 在另一台電腦執行，該電腦的 session log 不會自動同步到這台 Windows。
