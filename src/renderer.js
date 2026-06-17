@@ -17,13 +17,16 @@ function formatResetTime(ms) {
   const date = new Date(ms);
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
-  return new Intl.DateTimeFormat('zh-TW', {
-    month: sameDay ? undefined : 'numeric',
-    day: sameDay ? undefined : 'numeric',
-    hour: sameDay ? 'numeric' : undefined,
-    minute: sameDay ? '2-digit' : undefined,
-    hour12: true
-  }).format(date);
+  if (sameDay) {
+    return new Intl.DateTimeFormat('zh-TW', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  }
+  const datePart = new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(date);
+  const timePart = new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+  return `${datePart} ${timePart}`;
 }
 
 function formatClock(value) {
@@ -179,41 +182,89 @@ function renderValue(events) {
   savedMoneyEl.textContent = `NT$${new Intl.NumberFormat('zh-TW').format(savedMoney)}`;
 }
 
-function render(data) {
-  const events = recordUsageEvent(data);
-
+function renderCodexSection(data) {
   if (!data?.ok || !data.windows?.length) {
-    limitsEl.innerHTML = `<div class="empty">${escapeHtml(data?.message || '沒有可用資料')}</div>`;
-    updatedEl.textContent = '';
-    renderValue(events);
-    return;
+    return `<div class="section-label">CODEX</div><div class="empty">${escapeHtml(data?.message || '沒有可用資料')}</div>`;
   }
-
-  limitsEl.innerHTML = data.windows
+  const rows = data.windows
     .map((item) => {
       const tone = toneFor(item.remainingPercent);
       return `
-        <div class="limit-row ${tone}">
-          <div class="label">${escapeHtml(item.label)}</div>
-          <div class="meter" title="已用 ${Math.round(item.usedPercent)}%">
-            <span style="width:${item.remainingPercent}%"></span>
+        <div class="limit-pair">
+          <div class="limit-row ${tone}">
+            <div class="label">${escapeHtml(item.label)}</div>
+            <div class="meter" title="已用 ${Math.round(item.usedPercent)}%">
+              <span style="width:${item.remainingPercent}%"></span>
+            </div>
+            <div class="percent">${item.remainingPercent}%</div>
           </div>
-          <div class="percent">${item.remainingPercent}%</div>
           <div class="reset">${formatResetTime(item.resetsAt)}</div>
         </div>
       `;
     })
     .join('');
+  return `<div class="section-label">CODEX</div>${rows}`;
+}
 
-  const checkedText = formatClock(data.checkedAt || data.updatedAt);
-  const sourceAge = formatAge(Number(data.sourceEventAgeMs));
-  updatedEl.textContent = data.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
-  updatedEl.title = [
-    `來源：${data.sourceType || 'unknown'}`,
-    `事件：${data.updatedAt || '--'}`,
-    `路徑：${data.sourcePath || '--'}`,
-    data.stale ? '狀態：Codex 尚未寫出新的 rate_limits snapshot' : '狀態：資料新鮮'
-  ].join('\n');
+function renderClaudeSection(claude) {
+  const header = `<div class="section-label claude">CLAUDE</div>`;
+  if (!claude?.ok || (!claude.fiveHour && !claude.sevenDay)) {
+    return header + `<div class="empty unavailable">Claude 剩餘流量無法取得</div>`;
+  }
+  const rows = [];
+  if (claude.fiveHour) {
+    const { remainingPercent, usedPercent, resetsAt } = claude.fiveHour;
+    const tone = toneFor(remainingPercent);
+    rows.push(`
+      <div class="limit-pair">
+        <div class="limit-row ${tone}">
+          <div class="label">5 小時</div>
+          <div class="meter" title="已用 ${Math.round(usedPercent)}%">
+            <span style="width:${remainingPercent}%"></span>
+          </div>
+          <div class="percent">${remainingPercent}%</div>
+        </div>
+        <div class="reset">${formatResetTime(resetsAt)}</div>
+      </div>
+    `);
+  }
+  if (claude.sevenDay) {
+    const { remainingPercent, usedPercent, resetsAt } = claude.sevenDay;
+    const tone = toneFor(remainingPercent);
+    rows.push(`
+      <div class="limit-pair">
+        <div class="limit-row ${tone}">
+          <div class="label">1 週</div>
+          <div class="meter" title="已用 ${Math.round(usedPercent)}%">
+            <span style="width:${remainingPercent}%"></span>
+          </div>
+          <div class="percent">${remainingPercent}%</div>
+        </div>
+        <div class="reset">${formatResetTime(resetsAt)}</div>
+      </div>
+    `);
+  }
+  return header + rows.join('');
+}
+
+function render(data) {
+  const events = recordUsageEvent(data);
+
+  limitsEl.innerHTML = renderCodexSection(data) + renderClaudeSection(data?.claude);
+
+  if (data?.ok) {
+    const checkedText = formatClock(data.checkedAt || data.updatedAt);
+    const sourceAge = formatAge(Number(data.sourceEventAgeMs));
+    updatedEl.textContent = data.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
+    updatedEl.title = [
+      `來源：${data.sourceType || 'unknown'}`,
+      `事件：${data.updatedAt || '--'}`,
+      `路徑：${data.sourcePath || '--'}`,
+      data.stale ? '狀態：Codex 尚未寫出新的 rate_limits snapshot' : '狀態：資料新鮮'
+    ].join('\n');
+  } else {
+    updatedEl.textContent = '';
+  }
   renderValue(events);
 }
 

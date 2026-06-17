@@ -152,3 +152,21 @@ The widget now reports source freshness explicitly with `sourceEventAgeMs` and m
 ### Verification
 
 The direct reader returned a fresh 2026-06-05 `codex-session-jsonl` snapshot with 5-hour and weekly windows, and `stale: false`.
+
+## 2026-06-08 Widget Requires Manual Repositioning
+
+### Symptom
+
+Even though the widget is small, it can still be inconvenient when it stays at a previously dragged position and needs to be moved back near the Windows clock area.
+
+### Cause
+
+The main process previously persisted the last moved window bounds in `window-state.json` and reused that position on startup. Once the widget had been dragged elsewhere, future launches could keep showing it away from the taskbar time area.
+
+### Resolution
+
+The main window now computes a docked bottom-right position from Electron `screen.workArea` on startup, when shown from the tray, and after display metrics change. Manual dragging remains available for temporary repositioning.
+
+### Verification
+
+Ran `node --check src\main.js`.

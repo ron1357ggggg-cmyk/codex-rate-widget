@@ -2,79 +2,51 @@ const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen } = require
 const fs = require('fs');
 const path = require('path');
 const { readLatestRateLimits } = require('./rateLimits');
+const { getClaudeUsage } = require('./claudeUsage');
 
 let mainWindow;
 let tray;
 
-const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 150;
+const WINDOW_WIDTH = 340;
+const WINDOW_HEIGHT = 360;
+const DOCK_MARGIN_X = 14;
+const DOCK_MARGIN_Y = 12;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) app.quit();
 
-function statePath() {
-  return path.join(app.getPath('userData'), 'window-state.json');
-}
-
-function readWindowState() {
-  try {
-    const state = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
-    return {
-      ...state,
-      width: WINDOW_WIDTH,
-      height: WINDOW_HEIGHT
-    };
-  } catch {
-    return null;
-  }
-}
-
-function saveWindowState() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const bounds = mainWindow.getBounds();
-  fs.mkdirSync(app.getPath('userData'), { recursive: true });
-  fs.writeFileSync(statePath(), JSON.stringify(bounds, null, 2));
-}
-
-function defaultBounds() {
-  const display = screen.getPrimaryDisplay();
+function getDockBounds(display = screen.getPrimaryDisplay()) {
   const workArea = display.workArea;
   const width = WINDOW_WIDTH;
   const height = WINDOW_HEIGHT;
   return {
     width,
     height,
-    x: Math.round(workArea.x + workArea.width - width - 14),
-    y: Math.round(workArea.y + workArea.height - height - 12)
+    x: Math.round(workArea.x + workArea.width - width - DOCK_MARGIN_X),
+    y: Math.round(workArea.y + workArea.height - height - DOCK_MARGIN_Y)
   };
 }
 
-function fitBoundsToScreen(bounds) {
-  const display = screen.getPrimaryDisplay();
-  const workArea = display.workArea;
-  const width = Math.max(bounds.width || 0, WINDOW_WIDTH);
-  const height = Math.max(bounds.height || 0, WINDOW_HEIGHT);
-  const maxX = workArea.x + workArea.width - width - 14;
-  const maxY = workArea.y + workArea.height - height - 12;
+function dockWindow(display = screen.getPrimaryDisplay()) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setBounds(getDockBounds(display), false);
+}
 
-  return {
-    width,
-    height,
-    x: Math.min(Math.max(bounds.x ?? maxX, workArea.x + 14), maxX),
-    y: Math.min(Math.max(bounds.y ?? maxY, workArea.y + 12), maxY)
-  };
+function dockWindowNearCursor() {
+  const cursorPoint = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPoint);
+  dockWindow(display);
 }
 
 function createWindow() {
-  const saved = readWindowState();
-  const bounds = fitBoundsToScreen(saved || defaultBounds());
+  const bounds = getDockBounds();
 
   mainWindow = new BrowserWindow({
     ...bounds,
     minWidth: WINDOW_WIDTH,
     minHeight: WINDOW_HEIGHT,
-    maxWidth: 380,
-    maxHeight: 180,
+    maxWidth: 400,
+    maxHeight: 420,
     frame: false,
     transparent: true,
     resizable: false,
@@ -91,8 +63,10 @@ function createWindow() {
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.loadFile(path.join(__dirname, 'renderer.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.on('moved', saveWindowState);
+  mainWindow.once('ready-to-show', () => {
+    dockWindow();
+    mainWindow.show();
+  });
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
@@ -137,6 +111,7 @@ function toggleWindow() {
   if (mainWindow.isVisible()) {
     mainWindow.hide();
   } else {
+    dockWindowNearCursor();
     mainWindow.show();
     mainWindow.focus();
   }
@@ -144,6 +119,7 @@ function toggleWindow() {
 
 function showWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  dockWindowNearCursor();
   mainWindow.show();
   mainWindow.focus();
 }
@@ -157,8 +133,9 @@ async function pushRateLimits() {
 
 async function loadRateLimitsWithDiagnostics() {
   try {
-    const data = await readLatestRateLimits();
+    const [data, claude] = await Promise.all([readLatestRateLimits(), getClaudeUsage()]);
     if (!data.ok || data.stale) writeDiagnostic('rate-limit-refresh-warning', data);
+    data.claude = claude;
     return data;
   } catch (error) {
     const data = {
@@ -210,12 +187,14 @@ if (hasSingleInstanceLock) {
     createTray();
     pushRateLimits();
     setInterval(pushRateLimits, 30_000);
+    screen.on('display-metrics-changed', () => {
+      if (mainWindow?.isVisible()) dockWindow();
+    });
   });
 }
 
 app.on('before-quit', () => {
   app.isQuitting = true;
-  saveWindowState();
 });
 
 app.on('window-all-closed', (event) => {

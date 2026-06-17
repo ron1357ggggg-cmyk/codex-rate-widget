@@ -119,3 +119,16 @@
 ### Verification
 
 - Updated the quick index and focused widget error log.
+
+## 2026-06-08 Bottom Right Docking
+
+### Changed
+
+- Replaced persisted startup bounds with a computed Windows work-area bottom-right dock position.
+- Re-dock the widget near the clock area when it is shown from the tray or focused by a second launch.
+- Recalculate the dock position when display metrics change.
+- Documented the new positioning behavior and business rule.
+
+### Verification
+
+- Ran `node --check src\main.js`.
