@@ -1,10 +1,16 @@
-# Codex Rate Widget
+# Codex + Claude Rate Widget
 
-這是一個很小的 Windows Electron 常駐小窗，用來讀取本機 Codex session 裡最新的 `rate_limits`，顯示：
+這是一個很小的 Windows Electron 常駐小窗，分兩個區塊顯示：
 
+**Codex**（讀取本機 Codex session 的即時 `rate_limits`）
 - 5 小時剩餘百分比與恢復時間
 - 1 週剩餘百分比與恢復時間
-- 可拖曳移動、置頂、可縮到系統列
+
+**Claude**（讀取你手動維護的用量快照檔，見下方說明）
+- Session 剩餘百分比與重置時間
+- 每週剩餘百分比與重置時間
+
+共同特性：可拖曳移動、置頂、可縮到系統列、每 30 秒自動重新整理。
 
 ## 執行
 
@@ -17,7 +23,7 @@ npm.cmd start
 
 小窗會預設出現在右下角工作列時間附近。拖曳視窗本體可以移動位置，位置會自動記住。
 
-## 資料來源
+## 資料來源：Codex
 
 程式會掃描：
 
@@ -26,6 +32,17 @@ npm.cmd start
 ```
 
 並從最新的 `.jsonl` 事件中讀取 `rate_limits`。Codex 需要至少跑過一次並產生 token/rate limit 事件，畫面才會有真實資料。
+
+## 資料來源：Claude
+
+Claude 區塊透過 Claude Code CLI 的 OAuth token 向 `api.anthropic.com/v1/messages` 發送最小 API 呼叫，從回應標頭取得即時用量資料：
+
+- `anthropic-ratelimit-unified-5h-utilization` → 5 小時視窗已使用比例（0–1）
+- `anthropic-ratelimit-unified-7d-utilization` → 7 天視窗已使用比例（0–1）
+
+Widget 以 `100 - 使用%` 顯示剩餘量，並附上各視窗的重置時間。結果快取 5 分鐘，避免過度呼叫 API。
+
+Token 存放位置：`%USERPROFILE%\.claude\.credentials.json`（由 Claude Code 自動管理）。
 
 ## 視窗位置
 

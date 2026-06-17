@@ -1,34 +1,44 @@
 <!doctype html>
 <html lang="zh-Hant">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Codex Rate Widget</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="widget">
-      <header class="titlebar">
-        <div class="brand">
-          <span class="gauge" aria-hidden="true"></span>
-          <span>Codex 剩餘用量</span>
-        </div>
-        <div id="updated" class="updated"></div>
-        <div class="actions">
-          <button id="refresh" title="重新整理" type="button">↻</button>
-          <button id="hide" title="隱藏到系統列" type="button">×</button>
-        </div>
-      </header>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Usage Widget</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<main class="widget">
+<header class="titlebar">
+<div class="brand">
+<span class="gauge" aria-hidden="true"></span>
+<span>剩餘用量</span>
+</div>
+<div id="updated" class="updated"></div>
+<div class="actions">
+<button id="refresh" title="重新整理" type="button">↻</button>
+<button id="hide" title="隱藏到系統列" type="button">×</button>
+</div>
+</header>
 
-      <section id="limits" class="limits" aria-live="polite">
-        <div class="empty">讀取中</div>
-      </section>
+<section class="section">
+<h2 class="section-title">Codex</h2>
+<div id="codex-limits" class="limits" aria-live="polite">
+<div class="empty">讀取中</div>
+</div>
+</section>
 
-      <section class="value-strip" aria-live="polite">
-        <span>等效價值</span>
-        <strong id="saved-money">NT$0</strong>
-      </section>
-    </main>
-    <script src="./renderer.js"></script>
-  </body>
+<section class="section">
+<h2 class="section-title">Claude</h2>
+<div id="claude-limits" class="limits" aria-live="polite">
+<div class="empty">讀取中</div>
+</div>
+</section>
+
+<section class="value-strip" aria-live="polite">
+<span>Codex 等效價值</span>
+<strong id="saved-money">NT$0</strong>
+</section>
+</main>
+<script src="./renderer.js"></script>
+</body>
 </html>

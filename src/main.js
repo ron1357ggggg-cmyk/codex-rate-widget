@@ -17,13 +17,11 @@ if (!hasSingleInstanceLock) app.quit();
 
 function getDockBounds(display = screen.getPrimaryDisplay()) {
   const workArea = display.workArea;
-  const width = WINDOW_WIDTH;
-  const height = WINDOW_HEIGHT;
   return {
-    width,
-    height,
-    x: Math.round(workArea.x + workArea.width - width - DOCK_MARGIN_X),
-    y: Math.round(workArea.y + workArea.height - height - DOCK_MARGIN_Y)
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    x: Math.round(workArea.x + workArea.width - WINDOW_WIDTH - DOCK_MARGIN_X),
+    y: Math.round(workArea.y + workArea.height - WINDOW_HEIGHT - DOCK_MARGIN_Y)
   };
 }
 
@@ -76,34 +74,34 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromDataURL(
-    'data:image/svg+xml;utf8,' +
-      encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-          <rect width="32" height="32" rx="7" fill="#1f2937"/>
-          <path d="M8 18a8 8 0 1 1 15.2 3.5" fill="none" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M17 7v9l5 3" fill="none" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      `)
-  );
+const icon = nativeImage.createFromDataURL(
+'data:image/svg+xml;utf8,' +
+encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="7" fill="#1f2937"/>
+<path d="M8 18a8 8 0 1 1 15.2 3.5" fill="none" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M17 7v9l5 3" fill="none" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+`)
+);
 
-  tray = new Tray(icon);
-  tray.setToolTip('Codex 剩餘用量');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: '顯示/隱藏', click: toggleWindow },
-      { label: '重新整理', click: () => pushRateLimits() },
-      { type: 'separator' },
-      {
-        label: '離開',
-        click: () => {
-          app.isQuitting = true;
-          app.quit();
-        }
-      }
-    ])
-  );
-  tray.on('click', toggleWindow);
+tray = new Tray(icon);
+tray.setToolTip('Codex + Claude 剩餘用量');
+tray.setContextMenu(
+Menu.buildFromTemplate([
+{ label: '顯示/隱藏', click: toggleWindow },
+{ label: '重新整理', click: () => pushRateLimits() },
+{ type: 'separator' },
+{
+label: '離開',
+click: () => {
+app.isQuitting = true;
+app.quit();
+}
+}
+])
+);
+tray.on('click', toggleWindow);
 }
 
 function toggleWindow() {
@@ -124,63 +122,57 @@ function showWindow() {
   mainWindow.focus();
 }
 
-async function pushRateLimits() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const data = await loadRateLimitsWithDiagnostics();
-  mainWindow.webContents.send('rate-limits', data);
-  return data;
-}
-
 async function loadRateLimitsWithDiagnostics() {
+  let codex = { ok: false, windows: [], checkedAt: new Date().toISOString(), message: '讀取中' };
+  let claude = { ok: false, message: '讀取中' };
   try {
-    const [data, claude] = await Promise.all([readLatestRateLimits(), getClaudeUsage()]);
-    if (!data.ok || data.stale) writeDiagnostic('rate-limit-refresh-warning', data);
-    data.claude = claude;
-    return data;
+    [codex, claude] = await Promise.all([readLatestRateLimits(), getClaudeUsage()]);
+    if (!codex.ok || codex.stale) writeDiagnostic('codex-refresh-warning', codex);
   } catch (error) {
-    const data = {
-      ok: false,
-      checkedAt: new Date().toISOString(),
-      windows: [],
-      message: '讀取 Codex rate_limits 時發生錯誤。'
-    };
     writeDiagnostic('rate-limit-refresh-error', {
       message: error?.message || String(error),
       stack: error?.stack || null
     });
-    return data;
   }
+  return { codex, claude };
+}
+
+async function pushRateLimits() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const data = await loadRateLimitsWithDiagnostics();
+  mainWindow.webContents.send('usage:update', data);
+  return data;
 }
 
 function writeDiagnostic(type, payload) {
-  try {
-    const logPath = path.join(app.getPath('userData'), 'diagnostics.jsonl');
-    fs.mkdirSync(path.dirname(logPath), { recursive: true });
-    fs.appendFileSync(
-      logPath,
-      `${JSON.stringify({
-        timestamp: new Date().toISOString(),
-        type,
-        payload
-      })}\n`
-    );
-  } catch {
-    // Diagnostics must never break the widget.
-  }
+try {
+const logPath = path.join(app.getPath('userData'), 'diagnostics.jsonl');
+fs.mkdirSync(path.dirname(logPath), { recursive: true });
+fs.appendFileSync(
+logPath,
+`${JSON.stringify({
+timestamp: new Date().toISOString(),
+type,
+payload
+})}\n`
+);
+} catch {
+// Diagnostics must never break the widget.
+}
 }
 
-ipcMain.handle('rate-limits:get', () => loadRateLimitsWithDiagnostics());
+ipcMain.handle('usage:get', () => loadRateLimitsWithDiagnostics());
 ipcMain.on('window:hide', () => mainWindow?.hide());
 ipcMain.on('window:quit', () => {
-  app.isQuitting = true;
-  app.quit();
+app.isQuitting = true;
+app.quit();
 });
 
 if (hasSingleInstanceLock) {
-  app.on('second-instance', () => {
-    showWindow();
-    pushRateLimits();
-  });
+app.on('second-instance', () => {
+showWindow();
+pushRateLimits();
+});
 
   app.whenReady().then(() => {
     createWindow();
@@ -198,5 +190,5 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', (event) => {
-  event.preventDefault();
+event.preventDefault();
 });

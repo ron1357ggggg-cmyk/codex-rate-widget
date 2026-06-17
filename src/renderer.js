@@ -1,4 +1,5 @@
-const limitsEl = document.getElementById('limits');
+const codexLimitsEl = document.getElementById('codex-limits');
+const claudeLimitsEl = document.getElementById('claude-limits');
 const updatedEl = document.getElementById('updated');
 const refreshBtn = document.getElementById('refresh');
 const hideBtn = document.getElementById('hide');
@@ -54,6 +55,15 @@ function toneFor(percent) {
   if (percent <= 15) return 'danger';
   if (percent <= 35) return 'warn';
   return 'good';
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function loadJson(key, fallback) {
@@ -133,6 +143,9 @@ function isToday(timestamp) {
   return date.toDateString() === now.toDateString();
 }
 
+// The savings estimate is tied to Codex's known 5hr/weekly window economics.
+// Claude's plan windows/pricing differ, so this tracker intentionally only
+// ever consumes Codex data; it is not applied to the Claude section.
 function recordUsageEvent(data) {
   if (!data?.ok || !Array.isArray(data.windows)) return loadEvents();
 
@@ -182,85 +195,64 @@ function renderValue(events) {
   savedMoneyEl.textContent = `NT$${new Intl.NumberFormat('zh-TW').format(savedMoney)}`;
 }
 
-function renderCodexSection(data) {
-  if (!data?.ok || !data.windows?.length) {
-    return `<div class="section-label">CODEX</div><div class="empty">${escapeHtml(data?.message || '沒有可用資料')}</div>`;
-  }
-  const rows = data.windows
-    .map((item) => {
-      const tone = toneFor(item.remainingPercent);
-      return `
-        <div class="limit-pair">
-          <div class="limit-row ${tone}">
-            <div class="label">${escapeHtml(item.label)}</div>
-            <div class="meter" title="已用 ${Math.round(item.usedPercent)}%">
-              <span style="width:${item.remainingPercent}%"></span>
-            </div>
-            <div class="percent">${item.remainingPercent}%</div>
-          </div>
-          <div class="reset">${formatResetTime(item.resetsAt)}</div>
+function limitPairHtml(label, remainingPercent, usedPercent, resetsAt) {
+  const tone = toneFor(remainingPercent);
+  return `
+    <div class="limit-pair">
+      <div class="limit-row ${tone}">
+        <div class="label">${escapeHtml(label)}</div>
+        <div class="meter" title="已用 ${Math.round(usedPercent)}%">
+          <span style="width:${remainingPercent}%"></span>
         </div>
-      `;
-    })
-    .join('');
-  return `<div class="section-label">CODEX</div>${rows}`;
+        <div class="percent">${remainingPercent}%</div>
+      </div>
+      <div class="reset">${formatResetTime(resetsAt)}</div>
+    </div>
+  `;
 }
 
-function renderClaudeSection(claude) {
-  const header = `<div class="section-label claude">CLAUDE</div>`;
+function renderCodexContent(data) {
+  if (!data?.ok || !data.windows?.length) {
+    return `<div class="empty">${escapeHtml(data?.message || '沒有可用資料')}</div>`;
+  }
+  return data.windows
+    .map((item) => limitPairHtml(item.label, item.remainingPercent, item.usedPercent, item.resetsAt))
+    .join('');
+}
+
+function renderClaudeContent(claude) {
   if (!claude?.ok || (!claude.fiveHour && !claude.sevenDay)) {
-    return header + `<div class="empty unavailable">Claude 剩餘流量無法取得</div>`;
+    return `<div class="empty unavailable">${escapeHtml(claude?.message || '剩餘流量無法取得')}</div>`;
   }
   const rows = [];
   if (claude.fiveHour) {
     const { remainingPercent, usedPercent, resetsAt } = claude.fiveHour;
-    const tone = toneFor(remainingPercent);
-    rows.push(`
-      <div class="limit-pair">
-        <div class="limit-row ${tone}">
-          <div class="label">5 小時</div>
-          <div class="meter" title="已用 ${Math.round(usedPercent)}%">
-            <span style="width:${remainingPercent}%"></span>
-          </div>
-          <div class="percent">${remainingPercent}%</div>
-        </div>
-        <div class="reset">${formatResetTime(resetsAt)}</div>
-      </div>
-    `);
+    rows.push(limitPairHtml('5 小時', remainingPercent, usedPercent, resetsAt));
   }
   if (claude.sevenDay) {
     const { remainingPercent, usedPercent, resetsAt } = claude.sevenDay;
-    const tone = toneFor(remainingPercent);
-    rows.push(`
-      <div class="limit-pair">
-        <div class="limit-row ${tone}">
-          <div class="label">1 週</div>
-          <div class="meter" title="已用 ${Math.round(usedPercent)}%">
-            <span style="width:${remainingPercent}%"></span>
-          </div>
-          <div class="percent">${remainingPercent}%</div>
-        </div>
-        <div class="reset">${formatResetTime(resetsAt)}</div>
-      </div>
-    `);
+    rows.push(limitPairHtml('1 週', remainingPercent, usedPercent, resetsAt));
   }
-  return header + rows.join('');
+  return rows.join('');
 }
 
-function render(data) {
-  const events = recordUsageEvent(data);
+function render(payload) {
+  const codex = payload?.codex;
+  const claude = payload?.claude;
+  const events = recordUsageEvent(codex);
 
-  limitsEl.innerHTML = renderCodexSection(data) + renderClaudeSection(data?.claude);
+  codexLimitsEl.innerHTML = renderCodexContent(codex);
+  claudeLimitsEl.innerHTML = renderClaudeContent(claude);
 
-  if (data?.ok) {
-    const checkedText = formatClock(data.checkedAt || data.updatedAt);
-    const sourceAge = formatAge(Number(data.sourceEventAgeMs));
-    updatedEl.textContent = data.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
+  if (codex?.ok) {
+    const checkedText = formatClock(codex.checkedAt || codex.updatedAt);
+    const sourceAge = formatAge(Number(codex.sourceEventAgeMs));
+    updatedEl.textContent = codex.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
     updatedEl.title = [
-      `來源：${data.sourceType || 'unknown'}`,
-      `事件：${data.updatedAt || '--'}`,
-      `路徑：${data.sourcePath || '--'}`,
-      data.stale ? '狀態：Codex 尚未寫出新的 rate_limits snapshot' : '狀態：資料新鮮'
+      `Codex 來源：${codex.sourceType || 'unknown'}`,
+      `Codex 路徑：${codex.sourcePath || '--'}`,
+      `Codex 狀態：${codex.stale ? '尚未寫出新的 rate_limits snapshot' : '資料新鮮'}`,
+      `Claude 狀態：${claude?.ok ? '資料新鮮' : (claude?.message || '無法取得')}`
     ].join('\n');
   } else {
     updatedEl.textContent = '';
@@ -268,23 +260,14 @@ function render(data) {
   renderValue(events);
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
 async function refresh() {
   refreshBtn.disabled = true;
   updatedEl.textContent = '檢查中';
   try {
-    const data = await withTimeout(window.codexRateWidget.getRateLimits(), 5000);
+    const data = await withTimeout(window.usageWidget.getUsage(), 5000);
     render(data);
   } catch (error) {
-    console.error('Failed to refresh rate limits', error);
+    console.error('Failed to refresh usage', error);
     updatedEl.textContent = '檢查失敗';
   } finally {
     refreshBtn.disabled = false;
@@ -301,6 +284,6 @@ function withTimeout(promise, timeoutMs) {
 }
 
 refreshBtn.addEventListener('click', refresh);
-hideBtn.addEventListener('click', () => window.codexRateWidget.hide());
-window.codexRateWidget.onRateLimits(render);
+hideBtn.addEventListener('click', () => window.usageWidget.hide());
+window.usageWidget.onUsage(render);
 refresh();
