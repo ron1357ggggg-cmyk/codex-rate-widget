@@ -170,3 +170,23 @@ The main window now computes a docked bottom-right position from Electron `scree
 ### Verification
 
 Ran `node --check src\main.js`.
+
+## 2026-06-18 Widget Content Clipped After Claude Section
+
+### Symptom
+
+After adding the Claude usage section, the widget could show all four rate-limit bars but clip the lower value strip or squeeze the right-side percentage column.
+
+### Cause
+
+The window was still sized for the older Codex-only layout, while the CSS split the content into fixed grid bands. Codex and Claude sections competed for vertical space, leaving the bottom value strip with too little room.
+
+### Resolution
+
+The widget window was widened and made slightly taller. The widget grid now uses natural-height rows for the title, Codex section, Claude section, and value strip, with tighter spacing and safer meter columns.
+
+Follow-up tuning reduced excess bottom whitespace by lowering the combined widget height to 315px. Claude reset headers are now parsed from either epoch or ISO timestamp formats, and the Claude weekly row forces date display so the reset date is visible even when the reset is today.
+
+### Verification
+
+Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.

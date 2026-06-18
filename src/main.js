@@ -7,8 +7,8 @@ const { getClaudeUsage } = require('./claudeUsage');
 let mainWindow;
 let tray;
 
-const WINDOW_WIDTH = 340;
-const WINDOW_HEIGHT = 360;
+const WINDOW_WIDTH = 360;
+const WINDOW_HEIGHT = 315;
 const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -43,8 +43,8 @@ function createWindow() {
     ...bounds,
     minWidth: WINDOW_WIDTH,
     minHeight: WINDOW_HEIGHT,
-    maxWidth: 400,
-    maxHeight: 420,
+    maxWidth: 420,
+    maxHeight: 350,
     frame: false,
     transparent: true,
     resizable: false,

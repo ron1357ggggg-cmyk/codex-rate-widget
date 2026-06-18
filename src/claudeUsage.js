@@ -8,6 +8,18 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cache = null;
 let cacheTime = 0;
 
+function parseResetTime(value) {
+  if (!value) return null;
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function readToken() {
   try {
     const credsPath = path.join(os.homedir(), '.claude', '.credentials.json');
@@ -59,7 +71,7 @@ function fetchClaudeUsage(token) {
         result.fiveHour = {
           usedPercent: Math.round(used * 10) / 10,
           remainingPercent: Math.round((100 - used) * 10) / 10,
-          resetsAt: fiveReset ? Number(fiveReset) * 1000 : null
+          resetsAt: parseResetTime(fiveReset)
         };
       }
 
@@ -68,7 +80,7 @@ function fetchClaudeUsage(token) {
         result.sevenDay = {
           usedPercent: Math.round(used * 10) / 10,
           remainingPercent: Math.round((100 - used) * 10) / 10,
-          resetsAt: sevenReset ? Number(sevenReset) * 1000 : null
+          resetsAt: parseResetTime(sevenReset)
         };
       }
 

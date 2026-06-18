@@ -13,12 +13,12 @@ const OBSERVER_SETTINGS = {
   minutesPerWeeklyPercent: 5
 };
 
-function formatResetTime(ms) {
+function formatResetTime(ms, options = {}) {
   if (!ms) return '--';
   const date = new Date(ms);
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) {
+  if (sameDay && !options.forceDate) {
     return new Intl.DateTimeFormat('zh-TW', {
       hour: 'numeric',
       minute: '2-digit',
@@ -195,7 +195,7 @@ function renderValue(events) {
   savedMoneyEl.textContent = `NT$${new Intl.NumberFormat('zh-TW').format(savedMoney)}`;
 }
 
-function limitPairHtml(label, remainingPercent, usedPercent, resetsAt) {
+function limitPairHtml(label, remainingPercent, usedPercent, resetsAt, options = {}) {
   const tone = toneFor(remainingPercent);
   return `
     <div class="limit-pair">
@@ -206,7 +206,7 @@ function limitPairHtml(label, remainingPercent, usedPercent, resetsAt) {
         </div>
         <div class="percent">${remainingPercent}%</div>
       </div>
-      <div class="reset">${formatResetTime(resetsAt)}</div>
+      <div class="reset">${formatResetTime(resetsAt, options)}</div>
     </div>
   `;
 }
@@ -231,7 +231,7 @@ function renderClaudeContent(claude) {
   }
   if (claude.sevenDay) {
     const { remainingPercent, usedPercent, resetsAt } = claude.sevenDay;
-    rows.push(limitPairHtml('1 週', remainingPercent, usedPercent, resetsAt));
+    rows.push(limitPairHtml('1 週', remainingPercent, usedPercent, resetsAt, { forceDate: true }));
   }
   return rows.join('');
 }

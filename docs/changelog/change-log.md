@@ -132,3 +132,18 @@
 ### Verification
 
 - Ran `node --check src\main.js`.
+
+## 2026-06-18 Usage Widget Layout Fix
+
+### Changed
+
+- Increased the widget window from 340x360 to 360x390 for the combined Codex and Claude view.
+- Changed the widget content grid to natural-height rows so the bottom value strip is not clipped.
+- Tightened title, section, and limit-row spacing while preserving the percentage column.
+- Reduced excess bottom whitespace by settling the combined widget at 360x315.
+- Parse Claude reset headers as either epoch timestamps or ISO date strings.
+- Force the Claude weekly reset row to include the reset date even when it resets today.
+
+### Verification
+
+- Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.
