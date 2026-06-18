@@ -147,3 +147,14 @@
 ### Verification
 
 - Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.
+
+## 2026-06-18 Claude Project Rules
+
+### Changed
+
+- Added `.claude/CLAUDE.md` with project-specific rules for Claude, including required reading, UI constraints, reset-time handling, verification, and Git hygiene.
+- Ignored `.claude/settings.local.json` so local Claude settings are not committed.
+
+### Verification
+
+- Reviewed `git status --short` to confirm only the public Claude rules file and `.gitignore` changes are staged for commit.

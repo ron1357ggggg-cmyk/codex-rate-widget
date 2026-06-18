@@ -9,3 +9,6 @@ out/
 .env
 .DS_Store
 Thumbs.db
+
+# Claude local state
+.claude/settings.local.json
