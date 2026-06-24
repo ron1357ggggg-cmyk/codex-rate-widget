@@ -8,6 +8,12 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cache = null;
 let cacheTime = 0;
 
+function setClaudeUsageCache(value, now = Date.now()) {
+  if (!value?.ok) return;
+  cache = value;
+  cacheTime = now;
+}
+
 function parseResetTime(value) {
   if (!value) return null;
 
@@ -104,19 +110,19 @@ async function getClaudeUsage(force = false) {
   const token = readToken();
   if (!token) {
     const err = { ok: false, message: 'Claude Code credentials not found' };
-    cache = err;
-    cacheTime = now;
-    return err;
+    return cache?.ok ? { ...cache, cachedFallback: true } : err;
   }
 
   try {
     const result = await fetchClaudeUsage(token);
-    cache = result;
-    cacheTime = now;
-    return result;
+    if (result.ok) {
+      setClaudeUsageCache(result, now);
+      return result;
+    }
+    return cache?.ok ? { ...cache, cachedFallback: true } : result;
   } catch {
-    return cache ?? { ok: false, message: 'Claude usage fetch failed' };
+    return cache?.ok ? { ...cache, cachedFallback: true } : { ok: false, message: 'Claude usage fetch failed' };
   }
 }
 
-module.exports = { getClaudeUsage };
+module.exports = { getClaudeUsage, setClaudeUsageCache };

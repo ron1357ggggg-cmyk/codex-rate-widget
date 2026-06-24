@@ -12,6 +12,8 @@
 
 Electron main process 負責掃描 `%USERPROFILE%\.codex\sessions`，解析最新 `.jsonl` 事件中的 `rate_limits`。
 
+手動刷新由 main process 經 `src/codexLiveUsage.js` 啟動本機 Codex CLI app-server，呼叫 `account/rateLimits/read`。此流程不得取代每 30 秒自動讀取 LOG 的流程；即時查詢失敗時需 fallback 到 `src/rateLimits.js`。
+
 ## 規則
 
 回覆、文件、分析與註解預設使用繁體中文；程式碼、API 名稱、套件名稱、類別名稱、函式名稱、檔案名稱、環境變數名稱與 Git 指令保留原文。

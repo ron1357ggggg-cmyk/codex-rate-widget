@@ -158,3 +158,26 @@
 ### Verification
 
 - Reviewed `git status --short` to confirm only the public Claude rules file and `.gitignore` changes are staged for commit.
+
+## 2026-06-24 Live Manual Refresh
+
+### Changed
+
+- Added `src/codexLiveUsage.js` to request current account limits through Codex app-server `account/rateLimits/read`.
+- Split manual refresh from the existing automatic refresh IPC path.
+- Manual refresh now reads Claude subscription limits through Claude Code CLI `/usage` instead of the five-minute API cache.
+- Store successful Claude manual results in the shared memory cache and preserve the last successful value when the automatic API source temporarily fails.
+- Keep successful Codex live results for five minutes while the unchanged 30-second LOG check continues in the background, preventing an older LOG snapshot from immediately replacing the manual result.
+- Added local session fallback and a visible fallback label when Codex live refresh fails.
+- Kept startup and 30-second automatic refresh behavior unchanged.
+- Updated README, architecture, feature, business-rule, data-flow, troubleshooting, and Claude maintenance rules.
+
+### Verification
+
+- Generated and inspected the installed Codex 0.130.0 app-server protocol schema.
+- Queried the live Codex account limits successfully through the new module.
+- Queried Claude Code CLI `/usage`, parsed both `1:59pm` and `2pm` reset formats, and verified the live result in the running Widget.
+- Confirmed the visible values changed after pressing the Widget refresh button.
+- Waited beyond the next 30-second automatic check and confirmed the live values were not replaced by older local data.
+- Restarted the Widget and created a desktop shortcut for user testing.
+- Ran syntax checks for all changed JavaScript files.

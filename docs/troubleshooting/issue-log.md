@@ -190,3 +190,29 @@ Follow-up tuning reduced excess bottom whitespace by lowering the combined widge
 ### Verification
 
 Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.
+
+## 2026-06-24 Manual Refresh Cannot See Cross-Device Usage
+
+### 問題現象
+
+Codex 在其他電腦使用後，本機 Widget 即使手動重新整理，也可能仍顯示舊百分比。
+
+### 原因分析
+
+手動刷新與每 30 秒自動檢查原本共用本機 session LOG。其他電腦的活動不會立即寫入這台電腦的 `.jsonl`；Claude 手動刷新也會沿用 5 分鐘快取。
+
+### 解決方式
+
+新增 `src/codexLiveUsage.js`，手動刷新時呼叫 Codex app-server 的 `account/rateLimits/read`；另新增 `src/claudeLiveUsage.js`，執行 Claude Code CLI `/usage`。即時查詢失敗時退回既有資料來源，畫面顯示失敗狀態並寫入 diagnostics。每 30 秒自動檢查保持原樣。
+
+### 影響範圍
+
+只改變畫面與系統列的手動重新整理；啟動與定時更新仍使用原資料來源。
+
+### 後續注意事項
+
+Codex app-server 目前是 experimental。升級 Codex CLI 後若協定變更，需檢查 `account/rateLimits/read`，不可改用桌面座標點擊或 OCR 作為主要資料來源。
+
+### 驗證
+
+實際啟動 Widget 並按下重新整理，確認 Codex 與 Claude 數值皆更新。等待超過一輪 30 秒排程後，即時值仍保留，未被較舊 LOG 或 API 結果覆蓋。

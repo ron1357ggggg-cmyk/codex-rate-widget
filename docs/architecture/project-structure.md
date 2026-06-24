@@ -14,6 +14,8 @@
 
 初步結構請以 README.md 與目前檔案樹為準。新增功能前應先確認既有入口與模組分工。
 
+`src/rateLimits.js` 負責本機 Codex session LOG；`src/codexLiveUsage.js` 負責手動刷新時的 Codex app-server 即時查詢；`src/claudeUsage.js` 負責 Claude 自動 API 與快取；`src/claudeLiveUsage.js` 負責手動執行 Claude CLI `/usage`。`src/main.js` 必須維持自動與手動刷新入口分離。
+
 ## 規則
 
 回覆、文件、分析與註解預設使用繁體中文；程式碼、API 名稱、套件名稱、類別名稱、函式名稱、檔案名稱、環境變數名稱與 Git 指令保留原文。

@@ -2,7 +2,9 @@ const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen } = require
 const fs = require('fs');
 const path = require('path');
 const { readLatestRateLimits } = require('./rateLimits');
-const { getClaudeUsage } = require('./claudeUsage');
+const { getCodexLiveUsage } = require('./codexLiveUsage');
+const { getClaudeUsage, setClaudeUsageCache } = require('./claudeUsage');
+const { getClaudeLiveUsage } = require('./claudeLiveUsage');
 
 let mainWindow;
 let tray;
@@ -11,7 +13,9 @@ const WINDOW_WIDTH = 360;
 const WINDOW_HEIGHT = 315;
 const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
+const LIVE_RESULT_TTL_MS = 5 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
+let codexLiveCache = null;
 
 if (!hasSingleInstanceLock) app.quit();
 
@@ -90,7 +94,7 @@ tray.setToolTip('Codex + Claude 剩餘用量');
 tray.setContextMenu(
 Menu.buildFromTemplate([
 { label: '顯示/隱藏', click: toggleWindow },
-{ label: '重新整理', click: () => pushRateLimits() },
+{ label: '重新整理', click: () => pushRateLimits({ manual: true }) },
 { type: 'separator' },
 {
 label: '離開',
@@ -122,11 +126,66 @@ function showWindow() {
   mainWindow.focus();
 }
 
-async function loadRateLimitsWithDiagnostics() {
+async function readCodexUsage(manual) {
+  if (!manual) {
+    const localUsage = await readLatestRateLimits();
+    const liveAgeMs = Date.now() - Date.parse(codexLiveCache?.checkedAt || '');
+    if (codexLiveCache && Number.isFinite(liveAgeMs) && liveAgeMs < LIVE_RESULT_TTL_MS) {
+      return {
+        ...codexLiveCache,
+        checkedAt: localUsage.checkedAt,
+        sourceType: 'codex-app-server-cache'
+      };
+    }
+    return localUsage;
+  }
+
+  try {
+    codexLiveCache = await getCodexLiveUsage();
+    return codexLiveCache;
+  } catch (error) {
+    writeDiagnostic('codex-live-refresh-error', {
+      message: error?.message || String(error),
+      stack: error?.stack || null
+    });
+    const fallback = await readLatestRateLimits();
+    return {
+      ...fallback,
+      liveRefreshFailed: true,
+      liveRefreshMessage: error?.message || String(error)
+    };
+  }
+}
+
+async function readClaudeUsage(manual) {
+  if (!manual) return getClaudeUsage();
+
+  try {
+    const liveUsage = await getClaudeLiveUsage();
+    setClaudeUsageCache(liveUsage);
+    return liveUsage;
+  } catch (error) {
+    writeDiagnostic('claude-live-refresh-error', {
+      message: error?.message || String(error),
+      stack: error?.stack || null
+    });
+    const fallback = await getClaudeUsage();
+    return {
+      ...fallback,
+      liveRefreshFailed: true,
+      liveRefreshMessage: error?.message || String(error)
+    };
+  }
+}
+
+async function loadRateLimitsWithDiagnostics({ manual = false } = {}) {
   let codex = { ok: false, windows: [], checkedAt: new Date().toISOString(), message: '讀取中' };
   let claude = { ok: false, message: '讀取中' };
   try {
-    [codex, claude] = await Promise.all([readLatestRateLimits(), getClaudeUsage()]);
+    [codex, claude] = await Promise.all([
+      readCodexUsage(manual),
+      readClaudeUsage(manual)
+    ]);
     if (!codex.ok || codex.stale) writeDiagnostic('codex-refresh-warning', codex);
   } catch (error) {
     writeDiagnostic('rate-limit-refresh-error', {
@@ -137,9 +196,9 @@ async function loadRateLimitsWithDiagnostics() {
   return { codex, claude };
 }
 
-async function pushRateLimits() {
+async function pushRateLimits(options = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const data = await loadRateLimitsWithDiagnostics();
+  const data = await loadRateLimitsWithDiagnostics(options);
   mainWindow.webContents.send('usage:update', data);
   return data;
 }
@@ -162,6 +221,7 @@ payload
 }
 
 ipcMain.handle('usage:get', () => loadRateLimitsWithDiagnostics());
+ipcMain.handle('usage:refresh', () => loadRateLimitsWithDiagnostics({ manual: true }));
 ipcMain.on('window:hide', () => mainWindow?.hide());
 ipcMain.on('window:quit', () => {
 app.isQuitting = true;

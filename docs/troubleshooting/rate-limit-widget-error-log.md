@@ -32,3 +32,20 @@ Change direction:
 - Added stale display in the renderer.
 - Added `%APPDATA%\codex-rate-widget\diagnostics.jsonl` logging for stale/error refreshes.
 - Added `docs/rate-limit-widget-quick-index.md` as the mandatory first-read checklist.
+
+## 2026-06-24 Cross-Device Manual Refresh
+
+Symptom:
+
+- Manual refresh can remain stale when usage happened on another computer.
+
+Root cause:
+
+- Local Codex session logs only contain events written on this computer.
+- Manual refresh previously shared the same local-only reader as automatic refresh.
+
+Resolution:
+
+- Manual refresh calls Codex app-server `account/rateLimits/read` and Claude Code CLI `/usage`.
+- Automatic refresh remains local and cached.
+- Codex live-query failures fall back to the session reader and are visible in the titlebar and diagnostics.

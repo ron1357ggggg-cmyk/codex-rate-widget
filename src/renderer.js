@@ -247,12 +247,20 @@ function render(payload) {
   if (codex?.ok) {
     const checkedText = formatClock(codex.checkedAt || codex.updatedAt);
     const sourceAge = formatAge(Number(codex.sourceEventAgeMs));
-    updatedEl.textContent = codex.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
+    if (codex.liveRefreshFailed) {
+      updatedEl.textContent = `即時失敗 / LOG ${checkedText}`;
+    } else if (claude?.liveRefreshFailed) {
+      updatedEl.textContent = `Claude 即時失敗 ${checkedText}`;
+    } else {
+      updatedEl.textContent = codex.stale ? `檢查 ${checkedText} / 資料 ${sourceAge}` : `檢查 ${checkedText}`;
+    }
     updatedEl.title = [
       `Codex 來源：${codex.sourceType || 'unknown'}`,
       `Codex 路徑：${codex.sourcePath || '--'}`,
       `Codex 狀態：${codex.stale ? '尚未寫出新的 rate_limits snapshot' : '資料新鮮'}`,
-      `Claude 狀態：${claude?.ok ? '資料新鮮' : (claude?.message || '無法取得')}`
+      codex.liveRefreshFailed ? `Codex 即時查詢：${codex.liveRefreshMessage}` : 'Codex 即時查詢：成功或未要求',
+      `Claude 狀態：${claude?.ok ? '資料新鮮' : (claude?.message || '無法取得')}`,
+      claude?.liveRefreshFailed ? `Claude 即時查詢：${claude.liveRefreshMessage}` : 'Claude 即時查詢：成功或未要求'
     ].join('\n');
   } else {
     updatedEl.textContent = '';
@@ -260,11 +268,12 @@ function render(payload) {
   renderValue(events);
 }
 
-async function refresh() {
+async function refresh({ manual = false } = {}) {
   refreshBtn.disabled = true;
   updatedEl.textContent = '檢查中';
   try {
-    const data = await withTimeout(window.usageWidget.getUsage(), 5000);
+    const request = manual ? window.usageWidget.refreshUsage() : window.usageWidget.getUsage();
+    const data = await withTimeout(request, manual ? 15_000 : 5000);
     render(data);
   } catch (error) {
     console.error('Failed to refresh usage', error);
@@ -283,7 +292,7 @@ function withTimeout(promise, timeoutMs) {
   ]);
 }
 
-refreshBtn.addEventListener('click', refresh);
+refreshBtn.addEventListener('click', () => refresh({ manual: true }));
 hideBtn.addEventListener('click', () => window.usageWidget.hide());
 window.usageWidget.onUsage(render);
 refresh();

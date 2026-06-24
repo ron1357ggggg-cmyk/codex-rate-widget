@@ -58,7 +58,7 @@ Check this file whenever the widget appears stuck, stale, or broken.
 
 ## Data Source
 
-The widget does not call Codex servers. It reads local Codex session logs:
+The widget's startup and 30-second automatic refresh read local Codex session logs:
 
 ```text
 %USERPROFILE%\.codex\sessions
@@ -73,6 +73,8 @@ rate_limits
 ```
 
 The session log value is a snapshot emitted by Codex after model activity. It is not a live API query. If Codex Desktop shows a newer value but no new `rate_limits` event has been written to local session logs, the widget cannot derive the exact new value by itself.
+
+Manual refresh is intentionally different: it starts the installed Codex CLI app-server and requests `account/rateLimits/read`. This returns the account-level current limits and can reflect usage from another computer. If the live request fails, the widget falls back to the local session reader and surfaces the fallback state.
 
 ## Known Failure Pattern
 
@@ -102,7 +104,7 @@ Prefer changes in this order:
 
 1. Improve diagnostics and source freshness reporting.
 2. Improve session-log indexing without adding heavy dependencies.
-3. Add a documented second source only if Codex exposes a stable local file or API for rate limits.
+3. Keep manual refresh on the documented Codex app-server `account/rateLimits/read` path, with local LOG fallback because the app-server API is experimental.
 4. Avoid guessing rolling-window decay from old percentages. That can show precise-looking but wrong data.
 
 ## Quick Manual Checks

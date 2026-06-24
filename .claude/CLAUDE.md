@@ -47,6 +47,13 @@
 - `src/claudeUsage.js` 的 reset 時間解析需支援 epoch 秒、epoch 毫秒與 ISO date string。
 - 不要把 Claude 的用量套進 Codex 等效價值計算；目前等效價值只用 Codex usage observer events。
 
+## 手動刷新規則
+
+- 每 30 秒自動檢查維持原資料來源：Codex session LOG 與 Claude 快取。
+- 使用者手動按重新整理時，Codex 必須走 `src/codexLiveUsage.js` 的 app-server 即時查詢，Claude 必須走 `src/claudeLiveUsage.js` 的 Claude Code CLI `/usage` 查詢。
+- 不要用畫面座標、自動點擊或 OCR 讀 Codex／Claude 桌面版；即時資料應走程式介面。
+- Codex app-server 是 experimental，查詢失敗時必須 fallback 到本機 LOG，並保留可見錯誤狀態與 diagnostics。
+
 ## 檢查方式
 
 修改後至少執行：
@@ -57,6 +64,8 @@ node --check src\renderer.js
 node --check src\preload.js
 node --check src\claudeUsage.js
 node --check src\rateLimits.js
+node --check src\codexLiveUsage.js
+node --check src\claudeLiveUsage.js
 ```
 
 若有改 UI，請重啟此專案的 Electron 程序，確認新版實際顯示。
