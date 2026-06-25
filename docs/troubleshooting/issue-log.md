@@ -191,6 +191,24 @@ Follow-up tuning reduced excess bottom whitespace by lowering the combined widge
 
 Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.
 
+## 2026-06-25 Live Values Replaced After Five Minutes
+
+### Symptom
+
+After pressing refresh, the widget showed the newer cross-device live usage for only about five minutes, then the automatic check reverted the display to older local LOG values.
+
+### Cause
+
+The automatic `usage:get` path still read local Codex session LOG data every 30 seconds. A successful Codex live result was cached for only five minutes, so after that TTL expired the background LOG read could overwrite the live app-server values.
+
+### Resolution
+
+The normal automatic path now uses the same live sources as manual refresh: Codex app-server and Claude Code CLI. The background schedule is reduced to about 10 minutes, and Codex keeps the last successful live result if a later live query fails.
+
+### Verification
+
+Ran JavaScript syntax checks, queried Codex live usage through `src/codexLiveUsage.js`, queried Claude live usage through `src/claudeLiveUsage.js`, and ran `git diff --check` with only CRLF normalization warnings.
+
 ## 2026-06-24 Manual Refresh Cannot See Cross-Device Usage
 
 ### 問題現象
@@ -203,7 +221,7 @@ Codex 在其他電腦使用後，本機 Widget 即使手動重新整理，也可
 
 ### 解決方式
 
-新增 `src/codexLiveUsage.js`，手動刷新時呼叫 Codex app-server 的 `account/rateLimits/read`；另新增 `src/claudeLiveUsage.js`，執行 Claude Code CLI `/usage`。即時查詢失敗時退回既有資料來源，畫面顯示失敗狀態並寫入 diagnostics。每 30 秒自動檢查保持原樣。
+新增 `src/codexLiveUsage.js`，手動刷新時呼叫 Codex app-server 的 `account/rateLimits/read`；另新增 `src/claudeLiveUsage.js`，執行 Claude Code CLI `/usage`。即時查詢失敗時退回既有資料來源，畫面顯示失敗狀態並寫入 diagnostics。當時每 30 秒自動檢查保持原樣；2026-06-25 起已改為約每 10 分鐘走同一條 live refresh 資料流。
 
 ### 影響範圍
 
@@ -215,4 +233,4 @@ Codex app-server 目前是 experimental。升級 Codex CLI 後若協定變更，
 
 ### 驗證
 
-實際啟動 Widget 並按下重新整理，確認 Codex 與 Claude 數值皆更新。等待超過一輪 30 秒排程後，即時值仍保留，未被較舊 LOG 或 API 結果覆蓋。
+實際啟動 Widget 並按下重新整理，確認 Codex 與 Claude 數值皆更新。等待超過一輪 30 秒排程後，即時值仍保留，未被較舊 LOG 或 API 結果覆蓋。2026-06-25 起不再使用 30 秒 LOG 排程作為主資料來源。

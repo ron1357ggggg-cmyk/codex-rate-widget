@@ -12,7 +12,7 @@
 
 顯示 Codex 5 小時與 1 週 rate limit 剩餘量、恢復時間、可拖曳、置頂與系統列常駐。
 
-自動檢查每 30 秒執行，維持既有本機資料來源與快取策略。使用者手動按重新整理時，Codex 直接查詢帳戶 rate limits，Claude 透過 Claude Code CLI `/usage` 讀取訂閱用量，藉此取得其他電腦產生的最新帳戶用量。
+自動檢查約每 10 分鐘執行一次，並與手動重新整理使用相同的即時資料來源。Codex 直接查詢帳戶 rate limits，Claude 透過 Claude Code CLI `/usage` 讀取訂閱用量，藉此取得其他電腦產生的最新帳戶用量。本機 Codex session LOG 只作為即時查詢失敗後的 fallback。
 
 ## 規則
 

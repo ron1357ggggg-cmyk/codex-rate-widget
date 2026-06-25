@@ -13,7 +13,7 @@ const WINDOW_WIDTH = 360;
 const WINDOW_HEIGHT = 315;
 const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
-const LIVE_RESULT_TTL_MS = 5 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let codexLiveCache = null;
 
@@ -94,7 +94,7 @@ tray.setToolTip('Codex + Claude 剩餘用量');
 tray.setContextMenu(
 Menu.buildFromTemplate([
 { label: '顯示/隱藏', click: toggleWindow },
-{ label: '重新整理', click: () => pushRateLimits({ manual: true }) },
+{ label: '重新整理', click: () => pushRateLimits() },
 { type: 'separator' },
 {
 label: '離開',
@@ -126,20 +126,7 @@ function showWindow() {
   mainWindow.focus();
 }
 
-async function readCodexUsage(manual) {
-  if (!manual) {
-    const localUsage = await readLatestRateLimits();
-    const liveAgeMs = Date.now() - Date.parse(codexLiveCache?.checkedAt || '');
-    if (codexLiveCache && Number.isFinite(liveAgeMs) && liveAgeMs < LIVE_RESULT_TTL_MS) {
-      return {
-        ...codexLiveCache,
-        checkedAt: localUsage.checkedAt,
-        sourceType: 'codex-app-server-cache'
-      };
-    }
-    return localUsage;
-  }
-
+async function readCodexUsage() {
   try {
     codexLiveCache = await getCodexLiveUsage();
     return codexLiveCache;
@@ -148,6 +135,15 @@ async function readCodexUsage(manual) {
       message: error?.message || String(error),
       stack: error?.stack || null
     });
+    if (codexLiveCache) {
+      return {
+        ...codexLiveCache,
+        checkedAt: new Date().toISOString(),
+        sourceType: 'codex-app-server-cache',
+        liveRefreshFailed: true,
+        liveRefreshMessage: error?.message || String(error)
+      };
+    }
     const fallback = await readLatestRateLimits();
     return {
       ...fallback,
@@ -157,9 +153,7 @@ async function readCodexUsage(manual) {
   }
 }
 
-async function readClaudeUsage(manual) {
-  if (!manual) return getClaudeUsage();
-
+async function readClaudeUsage() {
   try {
     const liveUsage = await getClaudeLiveUsage();
     setClaudeUsageCache(liveUsage);
@@ -178,13 +172,13 @@ async function readClaudeUsage(manual) {
   }
 }
 
-async function loadRateLimitsWithDiagnostics({ manual = false } = {}) {
+async function loadRateLimitsWithDiagnostics() {
   let codex = { ok: false, windows: [], checkedAt: new Date().toISOString(), message: '讀取中' };
   let claude = { ok: false, message: '讀取中' };
   try {
     [codex, claude] = await Promise.all([
-      readCodexUsage(manual),
-      readClaudeUsage(manual)
+      readCodexUsage(),
+      readClaudeUsage()
     ]);
     if (!codex.ok || codex.stale) writeDiagnostic('codex-refresh-warning', codex);
   } catch (error) {
@@ -196,9 +190,9 @@ async function loadRateLimitsWithDiagnostics({ manual = false } = {}) {
   return { codex, claude };
 }
 
-async function pushRateLimits(options = {}) {
+async function pushRateLimits() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const data = await loadRateLimitsWithDiagnostics(options);
+  const data = await loadRateLimitsWithDiagnostics();
   mainWindow.webContents.send('usage:update', data);
   return data;
 }
@@ -221,7 +215,7 @@ payload
 }
 
 ipcMain.handle('usage:get', () => loadRateLimitsWithDiagnostics());
-ipcMain.handle('usage:refresh', () => loadRateLimitsWithDiagnostics({ manual: true }));
+ipcMain.handle('usage:refresh', () => loadRateLimitsWithDiagnostics());
 ipcMain.on('window:hide', () => mainWindow?.hide());
 ipcMain.on('window:quit', () => {
 app.isQuitting = true;
@@ -238,7 +232,7 @@ pushRateLimits();
     createWindow();
     createTray();
     pushRateLimits();
-    setInterval(pushRateLimits, 30_000);
+    setInterval(pushRateLimits, REFRESH_INTERVAL_MS);
     screen.on('display-metrics-changed', () => {
       if (mainWindow?.isVisible()) dockWindow();
     });

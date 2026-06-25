@@ -2,7 +2,7 @@
 
 這是一個很小的 Windows Electron 常駐小窗，分兩個區塊顯示：
 
-**Codex**（自動檢查讀取本機 session，手動刷新直接查詢帳戶用量）
+**Codex**（啟動、自動檢查與手動刷新皆優先直接查詢帳戶用量）
 - 5 小時剩餘百分比與恢復時間
 - 1 週剩餘百分比與恢復時間
 
@@ -10,9 +10,9 @@
 - Session 剩餘百分比與重置時間
 - 每週剩餘百分比與重置時間
 
-共同特性：可拖曳移動、置頂、可縮到系統列、每 30 秒自動重新整理。
+共同特性：可拖曳移動、置頂、可縮到系統列、約每 10 分鐘自動重新整理。
 
-按下標題列的重新整理按鈕時，Widget 會額外執行即時查詢：Codex 透過本機 `codex app-server` 取得帳戶最新用量，Claude 透過本機 Claude Code CLI 的 `/usage` 取得訂閱用量。這可反映同一帳戶在其他電腦產生的使用量，不需要開啟或切換 Codex、Claude 桌面視窗。
+Widget 啟動、自動重新整理、系統列重新整理與按下標題列重新整理按鈕時，都會執行即時查詢：Codex 透過本機 `codex app-server` 取得帳戶最新用量，Claude 透過本機 Claude Code CLI 的 `/usage` 取得訂閱用量。這可反映同一帳戶在其他電腦產生的使用量，不需要開啟或切換 Codex、Claude 桌面視窗。
 
 ## 執行
 
@@ -35,7 +35,7 @@ npm.cmd start
 
 並從最新的 `.jsonl` 事件中讀取 `rate_limits`。Codex 需要至少跑過一次並產生 token/rate limit 事件，畫面才會有真實資料。
 
-上述 LOG 是啟動與每 30 秒自動檢查的資料來源。手動刷新改由 Codex CLI app-server 的 `account/rateLimits/read` 取得帳戶即時值；若即時查詢失敗，會退回本機 LOG 並在標題列顯示 fallback 狀態。可用 `CODEX_CLI_PATH` 指定 Codex CLI 執行檔。
+上述 LOG 現在只作為 fallback。啟動、自動檢查與手動刷新都會先由 Codex CLI app-server 的 `account/rateLimits/read` 取得帳戶即時值；若即時查詢失敗，會優先保留上一筆成功的 live 值，沒有 live 值時才退回本機 LOG 並在標題列顯示 fallback 狀態。可用 `CODEX_CLI_PATH` 指定 Codex CLI 執行檔。
 
 ## 資料來源：Claude
 
@@ -44,7 +44,7 @@ Claude 區塊透過 Claude Code CLI 的 OAuth token 向 `api.anthropic.com/v1/me
 - `anthropic-ratelimit-unified-5h-utilization` → 5 小時視窗已使用比例（0–1）
 - `anthropic-ratelimit-unified-7d-utilization` → 7 天視窗已使用比例（0–1）
 
-Widget 以 `100 - 使用%` 顯示剩餘量，並附上各視窗的重置時間。自動檢查沿用 5 分鐘快取，避免過度呼叫 API；手動刷新改讀 Claude CLI `/usage`。可用 `CLAUDE_CLI_PATH` 指定 Claude CLI 執行檔。
+Widget 以 `100 - 使用%` 顯示剩餘量，並附上各視窗的重置時間。啟動、自動檢查與手動刷新都讀 Claude CLI `/usage`；背景自動檢查約每 10 分鐘執行一次，避免過度呼叫 CLI。可用 `CLAUDE_CLI_PATH` 指定 Claude CLI 執行檔。
 
 Token 存放位置：`%USERPROFILE%\.claude\.credentials.json`（由 Claude Code 自動管理）。
 

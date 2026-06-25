@@ -273,7 +273,7 @@ async function refresh({ manual = false } = {}) {
   updatedEl.textContent = '檢查中';
   try {
     const request = manual ? window.usageWidget.refreshUsage() : window.usageWidget.getUsage();
-    const data = await withTimeout(request, manual ? 15_000 : 5000);
+    const data = await withTimeout(request, 15_000);
     render(data);
   } catch (error) {
     console.error('Failed to refresh usage', error);

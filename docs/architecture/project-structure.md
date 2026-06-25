@@ -14,7 +14,7 @@
 
 初步結構請以 README.md 與目前檔案樹為準。新增功能前應先確認既有入口與模組分工。
 
-`src/rateLimits.js` 負責本機 Codex session LOG；`src/codexLiveUsage.js` 負責手動刷新時的 Codex app-server 即時查詢；`src/claudeUsage.js` 負責 Claude 自動 API 與快取；`src/claudeLiveUsage.js` 負責手動執行 Claude CLI `/usage`。`src/main.js` 必須維持自動與手動刷新入口分離。
+`src/rateLimits.js` 負責本機 Codex session LOG fallback；`src/codexLiveUsage.js` 負責 Codex app-server 即時查詢；`src/claudeUsage.js` 負責 Claude fallback 快取；`src/claudeLiveUsage.js` 負責執行 Claude CLI `/usage`。`src/main.js` 的自動與手動刷新入口可以保留不同 IPC 名稱，但資料來源必須一致走 live refresh；背景排程約 10 分鐘一次。
 
 ## 規則
 

@@ -181,3 +181,20 @@
 - Waited beyond the next 30-second automatic check and confirmed the live values were not replaced by older local data.
 - Restarted the Widget and created a desktop shortcut for user testing.
 - Ran syntax checks for all changed JavaScript files.
+
+## 2026-06-25 Live Refresh Schedule
+
+### Changed
+
+- Made the normal `usage:get` path use the same live refresh sources as the manual refresh button.
+- Changed background refresh from 30 seconds to 10 minutes to avoid repeatedly launching Codex app-server and Claude CLI.
+- Removed the five-minute Codex live-result TTL that allowed older local LOG data to replace live cross-device values.
+- When Codex live refresh fails, keep the last successful live result when available before falling back to local session LOG.
+- Increased the renderer refresh timeout to 15 seconds for both initial and manual live refreshes.
+
+### Verification
+
+- Ran syntax checks for all JavaScript files.
+- Queried Codex live usage successfully through `src/codexLiveUsage.js`.
+- Queried Claude live usage successfully through `src/claudeLiveUsage.js`.
+- Ran `git diff --check`; only existing CRLF normalization warnings were reported.

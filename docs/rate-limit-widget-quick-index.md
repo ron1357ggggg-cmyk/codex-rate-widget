@@ -104,8 +104,14 @@ Prefer changes in this order:
 
 1. Improve diagnostics and source freshness reporting.
 2. Improve session-log indexing without adding heavy dependencies.
-3. Keep manual refresh on the documented Codex app-server `account/rateLimits/read` path, with local LOG fallback because the app-server API is experimental.
+3. Keep both manual refresh and scheduled refresh on the documented Codex app-server `account/rateLimits/read` path, with local LOG fallback because the app-server API is experimental.
 4. Avoid guessing rolling-window decay from old percentages. That can show precise-looking but wrong data.
+
+## 2026-06-25 Refresh Schedule
+
+- Initial load, manual refresh, tray refresh, and scheduled refresh all use the live Codex app-server / Claude CLI data flow.
+- Scheduled refresh runs about every 10 minutes.
+- Local Codex session LOG reading is a fallback only; it should not replace the last successful live value during normal operation.
 
 ## Quick Manual Checks
 
