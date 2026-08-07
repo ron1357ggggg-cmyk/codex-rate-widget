@@ -9,11 +9,12 @@ const { getClaudeLiveUsage } = require('./claudeLiveUsage');
 let mainWindow;
 let tray;
 
-const WINDOW_WIDTH = 360;
-const WINDOW_HEIGHT = 315;
+const WINDOW_WIDTH = 240;
+const WINDOW_HEIGHT = 178;
 const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+const FRESH_LOCAL_CODEX_MS = 2 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let codexLiveCache = null;
 
@@ -47,8 +48,8 @@ function createWindow() {
     ...bounds,
     minWidth: WINDOW_WIDTH,
     minHeight: WINDOW_HEIGHT,
-    maxWidth: 420,
-    maxHeight: 350,
+    maxWidth: 280,
+    maxHeight: 220,
     frame: false,
     transparent: true,
     resizable: false,
@@ -127,30 +128,87 @@ function showWindow() {
 }
 
 async function readCodexUsage() {
-  try {
-    codexLiveCache = await getCodexLiveUsage();
-    return codexLiveCache;
-  } catch (error) {
+  const [liveResult, localResult] = await Promise.allSettled([
+    getCodexLiveUsage(),
+    readLatestRateLimits()
+  ]);
+  const liveUsage = liveResult.status === 'fulfilled' ? liveResult.value : null;
+  const localUsage = localResult.status === 'fulfilled' ? localResult.value : null;
+
+  if (liveUsage?.ok) {
+    codexLiveCache = liveUsage;
+  } else if (liveResult.status === 'rejected') {
+    const error = liveResult.reason;
     writeDiagnostic('codex-live-refresh-error', {
       message: error?.message || String(error),
       stack: error?.stack || null
     });
-    if (codexLiveCache) {
-      return {
-        ...codexLiveCache,
-        checkedAt: new Date().toISOString(),
-        sourceType: 'codex-app-server-cache',
-        liveRefreshFailed: true,
-        liveRefreshMessage: error?.message || String(error)
-      };
+  }
+
+  if (isFreshLocalCodexUsage(localUsage)) {
+    if (liveUsage?.ok && hasCodexUsageDifference(localUsage, liveUsage)) {
+      writeDiagnostic('codex-live-local-mismatch', {
+        local: summarizeCodexUsage(localUsage),
+        live: summarizeCodexUsage(liveUsage)
+      });
     }
-    const fallback = await readLatestRateLimits();
     return {
-      ...fallback,
-      liveRefreshFailed: true,
-      liveRefreshMessage: error?.message || String(error)
+      ...localUsage,
+      sourceType: 'codex-session-jsonl-preferred'
     };
   }
+
+  if (liveUsage?.ok) return liveUsage;
+
+  if (localUsage?.ok) {
+    return {
+      ...localUsage,
+      liveRefreshFailed: true,
+      liveRefreshMessage: liveResult.reason?.message || String(liveResult.reason || 'Codex live refresh failed')
+    };
+  }
+
+  if (codexLiveCache) {
+    return {
+      ...codexLiveCache,
+      checkedAt: new Date().toISOString(),
+      sourceType: 'codex-app-server-cache',
+      liveRefreshFailed: true,
+      liveRefreshMessage: liveResult.reason?.message || String(liveResult.reason || 'Codex live refresh failed')
+    };
+  }
+
+  throw liveResult.reason || localResult.reason || new Error('Codex usage sources failed');
+}
+
+function isFreshLocalCodexUsage(usage) {
+  return usage?.ok && Number.isFinite(Number(usage.sourceEventAgeMs)) && Number(usage.sourceEventAgeMs) <= FRESH_LOCAL_CODEX_MS;
+}
+
+function hasCodexUsageDifference(left, right) {
+  const leftWindows = summarizeCodexUsage(left).windows;
+  const rightWindows = summarizeCodexUsage(right).windows;
+  return leftWindows.some((item, index) => {
+    const other = rightWindows[index];
+    return other && Math.abs(Number(item.remainingPercent) - Number(other.remainingPercent)) >= 1;
+  });
+}
+
+function summarizeCodexUsage(usage) {
+  return {
+    checkedAt: usage?.checkedAt || null,
+    updatedAt: usage?.updatedAt || null,
+    sourceType: usage?.sourceType || null,
+    sourceEventAgeMs: usage?.sourceEventAgeMs ?? null,
+    windows: Array.isArray(usage?.windows)
+      ? usage.windows.map((item) => ({
+          label: item.label,
+          usedPercent: item.usedPercent,
+          remainingPercent: item.remainingPercent,
+          resetsAt: item.resetsAt
+        }))
+      : []
+  };
 }
 
 async function readClaudeUsage() {

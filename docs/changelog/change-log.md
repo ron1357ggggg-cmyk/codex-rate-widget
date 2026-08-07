@@ -198,3 +198,48 @@
 - Queried Codex live usage successfully through `src/codexLiveUsage.js`.
 - Queried Claude live usage successfully through `src/claudeLiveUsage.js`.
 - Ran `git diff --check`; only existing CRLF normalization warnings were reported.
+
+## 2026-06-30 Compact Text Layout
+
+### Changed
+
+- Reduced the widget window from 360x315 to 260x230.
+- Removed visible usage bars from the compact layout and kept percentage/reset text as the primary display.
+- Tightened padding, section spacing, row height, and footer sizing for a smaller clock-adjacent widget.
+- Kept warning/danger status visible through percentage text color instead of meter color.
+
+### Verification
+
+- Ran `node --check src\main.js`, `node --check src\renderer.js`, and `node --check src\preload.js`.
+- Ran `git diff --check`; only CRLF normalization warnings were reported.
+- Restarted the widget with the compact window size.
+
+## 2026-06-30 Denser Compact Layout
+
+### Changed
+
+- Reduced the compact widget from 260x230 to 240x178.
+- Moved reset time onto the same row as each usage label and percentage.
+- Tightened titlebar buttons, row gaps, section spacing, and footer height while keeping all existing descriptions visible.
+
+### Verification
+
+- Ran `node --check src\main.js`, `node --check src\renderer.js`, and `node --check src\preload.js`.
+- Ran `git diff --check`; only CRLF normalization warnings were reported.
+- Restarted the widget with the denser compact window size.
+
+## 2026-07-02 Codex Fresh Local Preference
+
+### Changed
+
+- Read Codex app-server and local Codex session LOG in parallel during refresh.
+- Prefer the local LOG when it has a fresh rate-limit event within 2 minutes, so the widget matches the local Codex Desktop display.
+- Keep app-server as the fallback for stale or missing local LOG data, preserving cross-device visibility.
+- Add `codex-live-local-mismatch` diagnostics when fresh local and live Codex percentages differ.
+
+### Verification
+
+- Simulated the source-selection logic and confirmed a fresh local LOG was selected over app-server when their 5-hour percentages differed.
+- Ran syntax checks for main, renderer, preload, Codex live usage, and Codex LOG reader modules.
+- Ran `git diff --check`; only CRLF normalization warnings were reported.
+- Restarted the widget with the Codex fresh-local preference.

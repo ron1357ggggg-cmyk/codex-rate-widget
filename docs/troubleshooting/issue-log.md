@@ -191,6 +191,24 @@ Follow-up tuning reduced excess bottom whitespace by lowering the combined widge
 
 Ran `node --check src\main.js`, `node --check src\renderer.js`, `node --check src\preload.js`, `node --check src\claudeUsage.js`, and `node --check src\rateLimits.js`.
 
+## 2026-07-02 Codex Live Value Differs From Local Codex Display
+
+### Symptom
+
+The widget's Codex 5-hour remaining percentage differed from the value shown by the local Codex Desktop app, while Claude values remained correct.
+
+### Cause
+
+Codex app-server `account/rateLimits/read` and the local Codex session LOG can temporarily report different 5-hour values. In the observed case, app-server returned a lower remaining percentage than the fresh local LOG, while the weekly value matched.
+
+### Resolution
+
+Codex refresh now reads app-server and local LOG in parallel. If the local LOG has a fresh rate-limit event within 2 minutes, the widget prefers the local LOG so it matches the local Codex Desktop display. If the local LOG is stale or unavailable, the widget still uses app-server to preserve cross-device usage visibility.
+
+### Verification
+
+Simulated the selection logic with live and local readers. The selected source was `codex-session-jsonl-preferred` when local LOG age was about 13 seconds, and the widget chose the local remaining percentages over the app-server percentages.
+
 ## 2026-06-25 Live Values Replaced After Five Minutes
 
 ### Symptom

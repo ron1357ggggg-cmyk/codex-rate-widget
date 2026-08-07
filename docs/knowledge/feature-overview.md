@@ -34,3 +34,6 @@
 Widget 啟動時會自動顯示在 Windows 工作區右下角，靠近工作列時間與通知區上方。從系統列圖示重新顯示時，會依滑鼠所在螢幕重新計算右下角停靠位置。
 
 使用者仍可拖曳 Widget 做臨時移動；拖曳位置不再作為下次啟動或下次顯示時的固定位置。
+## 2026-06-30 Compact Text Display
+
+Widget uses a smaller text-first layout at 260x230. Usage rows no longer show progress bars; percentage text and reset time are the primary display, with warning/danger conveyed through percentage color.

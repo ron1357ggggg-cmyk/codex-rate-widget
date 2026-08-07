@@ -38,3 +38,6 @@
 ## 注意事項
 
 每次查詢、分析或修改後，若產生可重用結論，必須回寫到本文件或其他對應 docs 文件。修改後也必須提醒使用者提交 Git。
+## 2026-07-02 Codex Fresh Local Preference
+
+Codex refresh now reads both sources in parallel. If the local Codex session LOG has a fresh `rate_limits` event within 2 minutes, the widget uses that value because it best matches the local Codex Desktop display. If the local LOG is missing or stale, the widget uses Codex app-server `account/rateLimits/read` to preserve cross-device visibility. When fresh local and live values differ, the main process writes a `codex-live-local-mismatch` diagnostic entry.
