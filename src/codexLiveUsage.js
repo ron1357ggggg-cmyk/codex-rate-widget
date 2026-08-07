@@ -51,13 +51,26 @@ function startCodexAppServer(cliPath) {
 function normalizeWindow(label, item) {
   if (!item) return null;
   const usedPercent = Math.min(100, Math.max(0, Number(item.usedPercent) || 0));
+  const windowMinutes = item.windowDurationMins || null;
   return {
-    label,
+    label: labelForWindowMinutes(windowMinutes, label),
     usedPercent,
     remainingPercent: Math.max(0, Math.round(100 - usedPercent)),
-    windowMinutes: item.windowDurationMins || null,
+    windowMinutes,
     resetsAt: item.resetsAt ? Number(item.resetsAt) * 1000 : null
   };
+}
+
+function labelForWindowMinutes(windowMinutes, fallback = '用量') {
+  const minutes = Number(windowMinutes);
+  if (minutes === 300) return '5 小時';
+  if (minutes === 10080) return '1 週';
+  if (Number.isFinite(minutes) && minutes > 0) {
+    if (minutes % 1440 === 0) return `${Math.round(minutes / 1440)} 天`;
+    if (minutes % 60 === 0) return `${Math.round(minutes / 60)} 小時`;
+    return `${minutes} 分鐘`;
+  }
+  return fallback;
 }
 
 function normalizeLiveUsage(response, cliPath) {

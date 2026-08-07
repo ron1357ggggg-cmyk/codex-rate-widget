@@ -37,3 +37,6 @@ Widget 啟動時會自動顯示在 Windows 工作區右下角，靠近工作列�
 ## 2026-06-30 Compact Text Display
 
 Widget uses a smaller text-first layout at 260x230. Usage rows no longer show progress bars; percentage text and reset time are the primary display, with warning/danger conveyed through percentage color.
+## 2026-08-07 Codex Single Weekly Window
+
+Codex display follows the actual windows returned by this machine's local session LOG. If Codex no longer reports a 5-hour recovery window and only reports the weekly window, the widget shows only `1 週` for Codex.

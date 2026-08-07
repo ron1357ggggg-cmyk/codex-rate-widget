@@ -41,3 +41,6 @@
 ## 2026-07-02 Codex Fresh Local Preference
 
 Codex refresh now reads both sources in parallel. If the local Codex session LOG has a fresh `rate_limits` event within 2 minutes, the widget uses that value because it best matches the local Codex Desktop display. If the local LOG is missing or stale, the widget uses Codex app-server `account/rateLimits/read` to preserve cross-device visibility. When fresh local and live values differ, the main process writes a `codex-live-local-mismatch` diagnostic entry.
+## 2026-08-07 Codex Local-First Window Labels
+
+Codex usage is local-first: the widget uses the local Codex session LOG whenever it returns an `ok` rate-limit payload, and only falls back to Codex app-server when local data is unavailable. Codex window labels must be derived from duration instead of array position. `300` minutes is `5 小時`; `10080` minutes is `1 週`. When Codex returns only one weekly window, the UI shows only `1 週`.

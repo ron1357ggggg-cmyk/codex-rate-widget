@@ -243,3 +243,18 @@
 - Ran syntax checks for main, renderer, preload, Codex live usage, and Codex LOG reader modules.
 - Ran `git diff --check`; only CRLF normalization warnings were reported.
 - Restarted the widget with the Codex fresh-local preference.
+## 2026-08-07 Codex Local-First Weekly Window Label
+
+### Changed
+
+- Prefer local Codex session LOG whenever it returns usable data; Codex app-server is now fallback only.
+- Label Codex windows from their actual duration instead of array position.
+- Display `window_minutes` / `windowDurationMins` of `10080` as `1 週`, so a single weekly Codex window is no longer mislabeled as `5 小時`.
+- Updated README, data-flow, feature overview, and troubleshooting notes.
+
+### Verification
+
+- Ran local Codex LOG reader and Codex app-server reader; both returned a single `1 週` window with `windowMinutes: 10080`.
+- Ran syntax checks for main, renderer, preload, Codex, and Claude modules.
+- Ran `git diff --check`; only CRLF normalization warnings were reported.
+- Restarted the widget after the display fix.

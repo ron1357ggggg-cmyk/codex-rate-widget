@@ -14,7 +14,6 @@ const WINDOW_HEIGHT = 178;
 const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
-const FRESH_LOCAL_CODEX_MS = 2 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let codexLiveCache = null;
 
@@ -145,7 +144,7 @@ async function readCodexUsage() {
     });
   }
 
-  if (isFreshLocalCodexUsage(localUsage)) {
+  if (localUsage?.ok) {
     if (liveUsage?.ok && hasCodexUsageDifference(localUsage, liveUsage)) {
       writeDiagnostic('codex-live-local-mismatch', {
         local: summarizeCodexUsage(localUsage),
@@ -179,10 +178,6 @@ async function readCodexUsage() {
   }
 
   throw liveResult.reason || localResult.reason || new Error('Codex usage sources failed');
-}
-
-function isFreshLocalCodexUsage(usage) {
-  return usage?.ok && Number.isFinite(Number(usage.sourceEventAgeMs)) && Number(usage.sourceEventAgeMs) <= FRESH_LOCAL_CODEX_MS;
 }
 
 function hasCodexUsageDifference(left, right) {

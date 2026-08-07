@@ -54,13 +54,26 @@ function normalizeWindow(label, item) {
   if (!item) return null;
   const used = clamp(Number(item.used_percent || 0), 0, 100);
   const remaining = Math.max(0, Math.round(100 - used));
+  const windowMinutes = item.window_minutes || null;
   return {
-    label,
+    label: labelForWindowMinutes(windowMinutes, label),
     usedPercent: used,
     remainingPercent: remaining,
-    windowMinutes: item.window_minutes || null,
+    windowMinutes,
     resetsAt: item.resets_at ? Number(item.resets_at) * 1000 : null
   };
+}
+
+function labelForWindowMinutes(windowMinutes, fallback = '用量') {
+  const minutes = Number(windowMinutes);
+  if (minutes === 300) return '5 小時';
+  if (minutes === 10080) return '1 週';
+  if (Number.isFinite(minutes) && minutes > 0) {
+    if (minutes % 1440 === 0) return `${Math.round(minutes / 1440)} 天`;
+    if (minutes % 60 === 0) return `${Math.round(minutes / 60)} 小時`;
+    return `${minutes} 分鐘`;
+  }
+  return fallback;
 }
 
 function clamp(value, min, max) {

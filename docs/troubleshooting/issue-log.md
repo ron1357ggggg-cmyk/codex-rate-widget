@@ -252,3 +252,20 @@ Codex app-server 目前是 experimental。升級 Codex CLI 後若協定變更，
 ### 驗證
 
 實際啟動 Widget 並按下重新整理，確認 Codex 與 Claude 數值皆更新。等待超過一輪 30 秒排程後，即時值仍保留，未被較舊 LOG 或 API 結果覆蓋。2026-06-25 起不再使用 30 秒 LOG 排程作為主資料來源。
+## 2026-08-07 Codex Weekly Window Mislabeled As 5 Hours
+
+### Symptom
+
+Codex currently reports only one limit window, but the widget displayed it as `5 小時`.
+
+### Cause
+
+Both local LOG normalization and app-server normalization assigned labels by array position: first window was always labeled `5 小時`, second window was always labeled `1 週`. Codex now can return a single primary window with `window_minutes` / `windowDurationMins` equal to `10080`, which is a weekly window.
+
+### Resolution
+
+Codex window labels are now derived from duration. `300` minutes is labeled `5 小時`, `10080` minutes is labeled `1 週`, and unknown durations get a duration-based fallback. Codex source selection is also local-first: local session LOG is used whenever available, with app-server only as fallback.
+
+### Verification
+
+Ran both local LOG and app-server readers. Each returned one Codex window labeled `1 週` with `windowMinutes: 10080`.

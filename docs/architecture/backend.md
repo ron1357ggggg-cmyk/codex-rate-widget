@@ -29,3 +29,6 @@ Electron main process 負責掃描 `%USERPROFILE%\.codex\sessions`，解析最�
 ## 注意事項
 
 每次查詢、分析或修改後，若產生可重用結論，必須回寫到本文件或其他對應 docs 文件。修改後也必須提醒使用者提交 Git。
+## 2026-08-07 Codex Source Priority
+
+`src/main.js` should prefer `src/rateLimits.js` local Codex session LOG whenever it returns usable data. `src/codexLiveUsage.js` app-server data is fallback-only for Codex. Both Codex readers must derive labels from window duration rather than position, because Codex can return a single weekly window as `primary`.

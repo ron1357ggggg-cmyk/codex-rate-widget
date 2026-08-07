@@ -53,3 +53,6 @@ Token 存放位置：`%USERPROFILE%\.claude\.credentials.json`（由 Claude Code
 Widget 啟動時會自動停靠在 Windows 工作區右下角，靠近工作列時間與通知區上方。從系統列圖示重新顯示 Widget 時，也會重新停靠到滑鼠所在螢幕的右下角附近。
 
 視窗仍可拖曳移動；拖曳只影響當下顯示位置，下一次啟動或從系統列叫出時會回到右下角停靠位置。
+## 2026-08-07 Codex 顯示規則
+
+Codex 區塊以這台電腦的本機 Codex session LOG 為主要來源；只有本機 LOG 沒有可用用量時，才 fallback 到 Codex app-server。Codex 視窗名稱依實際 `window_minutes` / `windowDurationMins` 顯示：`300` 顯示 `5 小時`，`10080` 顯示 `1 週`。如果目前 Codex 只回一週視窗，畫面只顯示 `1 週`，不會硬補或誤標成 `5 小時`。
