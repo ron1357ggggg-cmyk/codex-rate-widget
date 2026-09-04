@@ -44,3 +44,10 @@ Codex refresh now reads both sources in parallel. If the local Codex session LOG
 ## 2026-08-07 Codex Local-First Window Labels
 
 Codex usage is local-first: the widget uses the local Codex session LOG whenever it returns an `ok` rate-limit payload, and only falls back to Codex app-server when local data is unavailable. Codex window labels must be derived from duration instead of array position. `300` minutes is `5 小時`; `10080` minutes is `1 週`. When Codex returns only one weekly window, the UI shows only `1 週`.
+## 2026-08-10 Codex Stale Local Fallback
+
+Codex is local-first only when the local session LOG is not stale. If local LOG data is older than `STALE_AFTER_MS`, the widget must prefer Codex app-server when live data is available, and only show stale local LOG as an error/fallback state when live lookup fails.
+
+## 2026-08-10 Claude Current Session Parsing
+
+Claude live usage is read from `claude -p "/usage"`. The CLI can report `Current session: N% used` without a reset time, while weekly usage still reports `Current week (all models): N% used · resets ...`. The widget must parse and show the session percentage even when the reset text is missing. Claude's current-session row should be labeled `本次`, not `5 小時`, because the CLI no longer describes that value as a fixed 5-hour window.

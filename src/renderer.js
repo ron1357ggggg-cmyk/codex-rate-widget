@@ -227,7 +227,7 @@ function renderClaudeContent(claude) {
   const rows = [];
   if (claude.fiveHour) {
     const { remainingPercent, usedPercent, resetsAt } = claude.fiveHour;
-    rows.push(limitPairHtml('5 小時', remainingPercent, usedPercent, resetsAt));
+    rows.push(limitPairHtml('本次', remainingPercent, usedPercent, resetsAt));
   }
   if (claude.sevenDay) {
     const { remainingPercent, usedPercent, resetsAt } = claude.sevenDay;

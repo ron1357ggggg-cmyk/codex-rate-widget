@@ -144,7 +144,7 @@ async function readCodexUsage() {
     });
   }
 
-  if (localUsage?.ok) {
+  if (isUsableLocalCodexUsage(localUsage)) {
     if (liveUsage?.ok && hasCodexUsageDifference(localUsage, liveUsage)) {
       writeDiagnostic('codex-live-local-mismatch', {
         local: summarizeCodexUsage(localUsage),
@@ -155,6 +155,13 @@ async function readCodexUsage() {
       ...localUsage,
       sourceType: 'codex-session-jsonl-preferred'
     };
+  }
+
+  if (localUsage?.ok && localUsage.stale && liveUsage?.ok) {
+    writeDiagnostic('codex-stale-local-live-preferred', {
+      local: summarizeCodexUsage(localUsage),
+      live: summarizeCodexUsage(liveUsage)
+    });
   }
 
   if (liveUsage?.ok) return liveUsage;
@@ -178,6 +185,10 @@ async function readCodexUsage() {
   }
 
   throw liveResult.reason || localResult.reason || new Error('Codex usage sources failed');
+}
+
+function isUsableLocalCodexUsage(usage) {
+  return usage?.ok && !usage.stale;
 }
 
 function hasCodexUsageDifference(left, right) {

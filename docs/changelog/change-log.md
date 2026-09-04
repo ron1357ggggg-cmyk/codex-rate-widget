@@ -258,3 +258,33 @@
 - Ran syntax checks for main, renderer, preload, Codex, and Claude modules.
 - Ran `git diff --check`; only CRLF normalization warnings were reported.
 - Restarted the widget after the display fix.
+## 2026-08-10 Codex Stale Local Guard
+
+### Changed
+
+- Changed Codex local-first selection to prefer local session LOG only when it is not stale.
+- Prefer Codex app-server when local LOG is stale and live data is available.
+- Added `codex-stale-local-live-preferred` diagnostics for stale-local/live-success mismatches.
+- Updated data-flow and troubleshooting notes.
+
+### Verification
+
+- Ran syntax checks for main, renderer, preload, Codex, and Claude modules.
+- Queried local Codex LOG and Codex app-server; both returned fresh `1 週` values.
+- Simulated source selection and confirmed fresh local is preferred while stale local selects live app-server.
+- Ran `git diff --check`; only CRLF normalization warnings were reported.
+
+## 2026-08-10 Claude Current Session Without Reset
+
+### Changed
+
+- Parse Claude `Current session: N% used` even when Claude CLI omits the reset time.
+- Keep Claude weekly parsing compatible with optional reset text.
+- Display Claude current session as `本次` instead of `5 小時`.
+- Updated data-flow and troubleshooting notes.
+
+### Verification
+
+- Ran `node --check src\claudeLiveUsage.js` and `node --check src\renderer.js`.
+- Parsed a sample Claude CLI output with no current-session reset time.
+- Queried live Claude usage through `src/claudeLiveUsage.js`; it returned current session `remainingPercent: 100` and weekly `remainingPercent: 84`.

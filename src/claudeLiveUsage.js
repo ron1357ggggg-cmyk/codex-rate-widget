@@ -49,8 +49,8 @@ function normalizeUsageWindow(match, now) {
 }
 
 function parseClaudeUsageOutput(output, now = new Date()) {
-  const sessionMatch = output.match(/Current session:\s*([\d.]+)% used\s*[·-]\s*resets\s+([^\r\n]+)/i);
-  const weekMatch = output.match(/Current week(?:\s*\([^)]*\))?:\s*([\d.]+)% used\s*[·-]\s*resets\s+([^\r\n]+)/i);
+  const sessionMatch = output.match(/Current session:\s*([\d.]+)% used(?:\s*[·•\-–—]\s*resets\s+([^\r\n]+))?/i);
+  const weekMatch = output.match(/Current week(?:\s*\([^)]*\))?:\s*([\d.]+)% used(?:\s*[·•\-–—]\s*resets\s+([^\r\n]+))?/i);
   const fiveHour = normalizeUsageWindow(sessionMatch, now);
   const sevenDay = normalizeUsageWindow(weekMatch, now);
 

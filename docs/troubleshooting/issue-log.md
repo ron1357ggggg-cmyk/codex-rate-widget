@@ -269,3 +269,38 @@ Codex window labels are now derived from duration. `300` minutes is labeled `5 �
 ### Verification
 
 Ran both local LOG and app-server readers. Each returned one Codex window labeled `1 週` with `windowMinutes: 10080`.
+## 2026-08-10 Stale Local Codex LOG Overrides Live Value
+
+### Symptom
+
+Codex usage looked inaccurate because the widget displayed an old local LOG value even though Codex app-server returned a fresh account value.
+
+### Cause
+
+The local-first logic accepted any local Codex LOG payload with `ok: true`, including stale data. Diagnostics showed a stale local event from 2026-08-07 reporting 17% remaining while live app-server reported 100% remaining on 2026-08-10.
+
+### Resolution
+
+Local Codex LOG is now preferred only when it is not stale. If local data is stale and app-server succeeds, the widget uses app-server and writes `codex-stale-local-live-preferred` diagnostics. Stale local LOG is used only as fallback when live lookup fails.
+
+### Verification
+
+Pending syntax check and source-selection verification.
+
+## 2026-08-10 Claude Current Session Missing Reset
+
+### Symptom
+
+Claude current-session usage did not appear in the widget after the CLI returned `Current session: 0% used` without a reset time.
+
+### Cause
+
+The Claude CLI parser required both a percentage and `resets ...` text for the current-session row. When the CLI omitted reset text, the parser returned `fiveHour: null` even though the session percentage was valid.
+
+### Resolution
+
+The parser now accepts Claude current-session and weekly lines with optional reset text. The UI labels Claude current session as `本次` instead of `5 小時`.
+
+### Verification
+
+Ran syntax checks for `src/claudeLiveUsage.js` and `src/renderer.js`. Parsed both a sample CLI output and the live `claude -p "/usage"` output; both returned a valid current-session row with `remainingPercent: 100` and `resetsAt: null`.
