@@ -227,7 +227,7 @@ async function readClaudeUsage() {
       message: error?.message || String(error),
       stack: error?.stack || null
     });
-    const fallback = await getClaudeUsage();
+    const fallback = { ok: false, message: error?.message || 'Claude 用量取得失敗' };
     return {
       ...fallback,
       liveRefreshFailed: true,

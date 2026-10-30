@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const https = require('https');
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -67,7 +68,7 @@ function parseClaudeUsageOutput(output, now = new Date()) {
   };
 }
 
-function getClaudeLiveUsage() {
+function getClaudeCliUsage() {
   return new Promise((resolve, reject) => {
     const cliPath = resolveClaudeCliPath();
     const child = spawn(cliPath, ['-p', '/usage'], {
@@ -112,6 +113,47 @@ function getClaudeLiveUsage() {
         finish(error);
       }
     });
+  });
+}
+
+function getClaudeLiveUsage() {
+  return new Promise((resolve, reject) => {
+    let token;
+    try {
+      const credentials = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude', '.credentials.json'), 'utf8'));
+      token = credentials?.claudeAiOauth?.accessToken;
+    } catch {}
+    if (!token) return reject(new Error('Claude Code 請先重新登入（claude auth login）'));
+    const request = https.get('https://api.anthropic.com/api/oauth/usage', {
+      headers: { Authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20' }
+    }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { body += chunk; });
+      response.on('error', reject);
+      response.on('end', () => {
+        if (response.statusCode === 401 || response.statusCode === 403) {
+          reject(new Error('Claude Code 登入失效，請執行 claude auth login'));
+          return;
+        }
+        if (response.statusCode !== 200) return reject(new Error(`Claude usage HTTP ${response.statusCode}`));
+        try {
+          const data = JSON.parse(body);
+          const normalize = (window) => {
+            if (!window || typeof window.utilization !== 'number' || !Number.isFinite(window.utilization)) return null;
+            const usedPercent = Math.max(0, Math.min(100, window.utilization));
+            const reset = Date.parse(window.resets_at);
+            return { usedPercent, remainingPercent: Math.round((100 - usedPercent) * 10) / 10, resetsAt: Number.isFinite(reset) ? reset : null };
+          };
+          const fiveHour = normalize(data.five_hour);
+          const sevenDay = normalize(data.seven_day);
+          if (!fiveHour && !sevenDay) throw new Error('Claude usage 回應沒有可用額度');
+          resolve({ ok: true, checkedAt: new Date().toISOString(), sourceType: 'claude-oauth-usage', fiveHour, sevenDay });
+        } catch (error) { reject(error); }
+      });
+    });
+    request.on('error', reject);
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => request.destroy(new Error('Claude usage request timed out')));
   });
 }
 
