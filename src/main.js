@@ -15,6 +15,7 @@ const DOCK_MARGIN_X = 14;
 const DOCK_MARGIN_Y = 12;
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
+writeDiagnostic('startup-lock', { acquired: hasSingleInstanceLock });
 let codexLiveCache = null;
 
 if (!hasSingleInstanceLock) app.quit();
@@ -52,7 +53,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     resizable: false,
-    show: false,
+    show: true,
     skipTaskbar: true,
     alwaysOnTop: true,
     hasShadow: false,
@@ -68,6 +69,12 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     dockWindow();
     mainWindow.show();
+  });
+  mainWindow.webContents.once('did-finish-load', () => {
+    dockWindow();
+    mainWindow.show();
+    mainWindow.moveTop();
+    writeDiagnostic('window-loaded', { visible: mainWindow.isVisible(), bounds: mainWindow.getBounds() });
   });
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
@@ -293,6 +300,7 @@ pushRateLimits();
 });
 
   app.whenReady().then(() => {
+    writeDiagnostic('startup-ready', {});
     createWindow();
     createTray();
     pushRateLimits();
