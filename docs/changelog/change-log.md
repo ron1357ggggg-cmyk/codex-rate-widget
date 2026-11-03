@@ -313,3 +313,50 @@
 ### 風險評估
 
 Claude Code 閒置時資料不會更新，其他裝置的用量會延遲反映。設定 status line 後，Claude Code 底部會少掉大部分快捷鍵提示。移動專案資料夾後需同步修改 `statusLine` 路徑。
+
+## 2026-11-03 Claude 快照更新時即時刷新
+
+### 異動原因
+
+Widget 約每 10 分鐘才讀一次快照，顯示值會落後。
+
+### 異動內容
+
+新增 `watchClaudeSnapshot()` 與 `pushClaudeUsage()`，快照更新後只刷新 Claude 區塊。
+
+### 異動檔案
+
+`src/main.js`、`src/claudeLiveUsage.js`、`docs/`
+
+### 測試方式
+
+語法檢查，並重啟 Widget，寫入暫時值後比對前後畫面。
+
+### 風險評估
+
+若監看失敗會寫入 `claude-snapshot-watch-error`，仍可靠每 10 分鐘的讀取更新。
+
+## 2026-11-03 Claude 用量合併 /usage 與快照
+
+### 異動原因
+
+使用者要求以 `/usage` 為準，同時保留快照的即時更新與失敗備援。
+
+### 異動內容
+
+- 新增 `mergeClaudeUsage()`，並匯出 `getClaudeCliUsage()`。
+- `readClaudeUsage()` 在啟動、定時與手動刷新時查詢 `/usage`；快照更新時只合併，不啟動 CLI。
+- CLI 改在 `close` 時解析，逾時改為 12 秒，加上 `--no-session-persistence`，並記錄失敗細節。
+- 滑鼠停在 Claude 區塊會顯示兩個來源的時間與失敗訊息。
+
+### 異動檔案
+
+`src/claudeLiveUsage.js`、`src/main.js`、`src/renderer.js`、`README.md`、`.claude/CLAUDE.md`、`docs/`
+
+### 測試方式
+
+語法檢查、合併與解析測試、實際 `/usage` 查詢、強制失敗測試、重啟比對畫面。
+
+### 風險評估
+
+每 10 分鐘會啟動一次 CLI。同一視窗內若使用率真的下降，畫面可能暫時維持較高值。

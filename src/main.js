@@ -4,7 +4,7 @@ const path = require('path');
 const { readLatestRateLimits } = require('./rateLimits');
 const { getCodexLiveUsage } = require('./codexLiveUsage');
 const { getClaudeUsage, setClaudeUsageCache } = require('./claudeUsage');
-const { getClaudeStatusLineUsage } = require('./claudeLiveUsage');
+const { claudeSnapshotPath, getClaudeCliUsage, getClaudeStatusLineUsage, mergeClaudeUsage } = require('./claudeLiveUsage');
 
 let mainWindow;
 let tray;
@@ -17,6 +17,7 @@ const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 writeDiagnostic('startup-lock', { acquired: hasSingleInstanceLock });
 let codexLiveCache = null;
+let lastCodexUsage = null;
 
 if (!hasSingleInstanceLock) app.quit();
 
@@ -224,18 +225,48 @@ function summarizeCodexUsage(usage) {
   };
 }
 
-async function readClaudeUsage() {
+let claudeCliUsage = null;
+let claudeCliError = null;
+let claudeCliPending = null;
+
+function refreshClaudeCliUsage() {
+  if (claudeCliPending) return claudeCliPending;
+  claudeCliPending = getClaudeCliUsage()
+    .then((usage) => {
+      claudeCliUsage = usage;
+      claudeCliError = null;
+    })
+    .catch((error) => {
+      claudeCliError = error?.message || String(error);
+      writeDiagnostic('claude-cli-usage-error', {
+        message: claudeCliError,
+        details: error?.details || null,
+        stack: error?.stack || null
+      });
+    })
+    .finally(() => { claudeCliPending = null; });
+  return claudeCliPending;
+}
+
+function readClaudeSnapshot() {
   try {
-    const usage = getClaudeStatusLineUsage();
-    setClaudeUsageCache(usage);
-    return usage;
+    return { usage: getClaudeStatusLineUsage(), error: null };
   } catch (error) {
-    writeDiagnostic('claude-live-refresh-error', {
-      message: error?.message || String(error),
-      stack: error?.stack || null
-    });
-    return { ok: false, message: error?.message || 'Claude 用量取得失敗' };
+    return { usage: null, error: error?.message || String(error) };
   }
+}
+
+// 只有快照更新時 refreshCli 為 false：沿用上一筆 /usage，不重新啟動 CLI。
+async function readClaudeUsage({ refreshCli = true } = {}) {
+  if (refreshCli) await refreshClaudeCliUsage();
+  const snapshot = readClaudeSnapshot();
+  const merged = mergeClaudeUsage(claudeCliUsage, snapshot.usage);
+  if (!merged) {
+    const message = claudeCliError || snapshot.error || 'Claude 用量取得失敗';
+    return { ok: false, message, liveRefreshFailed: Boolean(claudeCliError), liveRefreshMessage: claudeCliError };
+  }
+  setClaudeUsageCache(merged);
+  return { ...merged, liveRefreshFailed: Boolean(claudeCliError), liveRefreshMessage: claudeCliError };
 }
 
 async function loadRateLimitsWithDiagnostics() {
@@ -246,6 +277,7 @@ async function loadRateLimitsWithDiagnostics() {
       readCodexUsage(),
       readClaudeUsage()
     ]);
+    lastCodexUsage = codex;
     if (!codex.ok || codex.stale) writeDiagnostic('codex-refresh-warning', codex);
   } catch (error) {
     writeDiagnostic('rate-limit-refresh-error', {
@@ -261,6 +293,31 @@ async function pushRateLimits() {
   const data = await loadRateLimitsWithDiagnostics();
   mainWindow.webContents.send('usage:update', data);
   return data;
+}
+
+// 快照一更新就只刷新 Claude，沿用上一筆 Codex，避免每次都查詢 Codex app-server。
+async function pushClaudeUsage() {
+  if (!mainWindow || mainWindow.isDestroyed() || !lastCodexUsage) return;
+  const claude = await readClaudeUsage({ refreshCli: false });
+  mainWindow.webContents.send('usage:update', { codex: lastCodexUsage, claude });
+}
+
+function watchClaudeSnapshot() {
+  const snapshotPath = claudeSnapshotPath();
+  const snapshotName = path.basename(snapshotPath);
+  let debounce = null;
+  try {
+    // 腳本以 rename 整檔替換，所以監看資料夾而不是檔案本身。
+    fs.watch(path.dirname(snapshotPath), (_event, filename) => {
+      if (filename !== snapshotName) return;
+      clearTimeout(debounce);
+      debounce = setTimeout(pushClaudeUsage, 300);
+    }).on('error', (error) => {
+      writeDiagnostic('claude-snapshot-watch-error', { message: error?.message || String(error) });
+    });
+  } catch (error) {
+    writeDiagnostic('claude-snapshot-watch-error', { message: error?.message || String(error) });
+  }
 }
 
 function writeDiagnostic(type, payload) {
@@ -300,6 +357,7 @@ pushRateLimits();
     createTray();
     pushRateLimits();
     setInterval(pushRateLimits, REFRESH_INTERVAL_MS);
+    watchClaudeSnapshot();
     screen.on('display-metrics-changed', () => {
       if (mainWindow?.isVisible()) dockWindow();
     });

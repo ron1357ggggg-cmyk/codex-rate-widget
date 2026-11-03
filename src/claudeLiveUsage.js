@@ -6,6 +6,10 @@ const https = require('https');
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const SNAPSHOT_STALE_MS = 45 * 60 * 1000;
+// 要比 renderer 的 15 秒逾時短，失敗時畫面才來得及顯示快照。
+const CLI_TIMEOUT_MS = 12_000;
+// /usage 與快照的重置時間可能差 1 分鐘，差距在此範圍內視為同一個視窗。
+const SAME_WINDOW_TOLERANCE_MS = 2 * 60 * 1000;
 
 function resolveClaudeCliPath() {
   const candidates = [
@@ -72,7 +76,8 @@ function parseClaudeUsageOutput(output, now = new Date()) {
 function getClaudeCliUsage() {
   return new Promise((resolve, reject) => {
     const cliPath = resolveClaudeCliPath();
-    const child = spawn(cliPath, ['-p', '/usage'], {
+    // 定時查詢不留下 session 紀錄，避免每天累積大量 transcript。
+    const child = spawn(cliPath, ['-p', '/usage', '--no-session-persistence'], {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -85,13 +90,17 @@ function getClaudeCliUsage() {
       settled = true;
       clearTimeout(timeout);
       if (!child.killed) child.kill();
-      if (error) reject(error);
-      else resolve(result);
+      if (error) {
+        error.details = { cliPath, stdoutTail: stdout.slice(-1000), stderrTail: stderr.slice(-1000) };
+        reject(error);
+      } else {
+        resolve(result);
+      }
     };
 
     const timeout = setTimeout(() => {
       finish(new Error('Claude live usage request timed out'));
-    }, REQUEST_TIMEOUT_MS);
+    }, CLI_TIMEOUT_MS);
 
     child.on('error', (error) => finish(error));
     child.stdout.setEncoding('utf8');
@@ -102,7 +111,8 @@ function getClaudeCliUsage() {
     child.stderr.on('data', (chunk) => {
       stderr = `${stderr}${chunk}`.slice(-2000);
     });
-    child.on('exit', (code) => {
+    // 用 close 而非 exit：exit 觸發時 stdout 可能還沒收完。
+    child.on('close', (code) => {
       if (settled) return;
       if (code !== 0) {
         finish(new Error(stderr.trim() || `Claude CLI exited with code ${code}`));
@@ -200,4 +210,37 @@ function getClaudeStatusLineUsage(now = Date.now()) {
   };
 }
 
-module.exports = { getClaudeLiveUsage, getClaudeStatusLineUsage, parseClaudeUsageOutput, parseResetText, resolveClaudeCliPath };
+function pickClaudeWindow(cli, snapshot, cliTime, snapshotTime) {
+  if (!cli || !snapshot) return cli || snapshot || null;
+  if (cli.resetsAt === null || snapshot.resetsAt === null) {
+    return cliTime >= snapshotTime ? cli : snapshot;
+  }
+  if (Math.abs(cli.resetsAt - snapshot.resetsAt) > SAME_WINDOW_TOLERANCE_MS) {
+    return cli.resetsAt > snapshot.resetsAt ? cli : snapshot;
+  }
+  // 同一個視窗內用量只增不減，較高的值才是較新的資料；快照時間只代表 status line 的執行時間。
+  const higher = snapshot.usedPercent > cli.usedPercent ? snapshot : cli;
+  return { ...higher, resetsAt: cli.resetsAt };
+}
+
+function mergeClaudeUsage(cli, snapshot, now = Date.now()) {
+  if (!cli && !snapshot) return null;
+  const cliTime = cli ? Date.parse(cli.checkedAt) || 0 : 0;
+  const snapshotTime = snapshot ? Date.parse(snapshot.checkedAt) || 0 : 0;
+  const latest = Math.max(cliTime, snapshotTime);
+  const fiveHour = pickClaudeWindow(cli && cli.fiveHour, snapshot && snapshot.fiveHour, cliTime, snapshotTime);
+  const sevenDay = pickClaudeWindow(cli && cli.sevenDay, snapshot && snapshot.sevenDay, cliTime, snapshotTime);
+  return {
+    ok: true,
+    checkedAt: new Date(latest).toISOString(),
+    sourceType: 'claude-usage-merged',
+    cliCheckedAt: cli ? cli.checkedAt : null,
+    snapshotCheckedAt: snapshot ? snapshot.checkedAt : null,
+    stale: now - latest > SNAPSHOT_STALE_MS ||
+      [fiveHour, sevenDay].some((window) => window && window.resetsAt !== null && window.resetsAt <= now),
+    fiveHour,
+    sevenDay
+  };
+}
+
+module.exports = { claudeSnapshotPath, getClaudeCliUsage, getClaudeLiveUsage, getClaudeStatusLineUsage, mergeClaudeUsage, parseClaudeUsageOutput, parseResetText, resolveClaudeCliPath };

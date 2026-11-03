@@ -221,8 +221,13 @@ function renderCodexContent(data) {
 }
 
 function renderClaudeContent(claude) {
+  const claudeTime = (value) => (value ? new Date(value).toLocaleString() : '尚無資料');
   claudeLimitsEl.title = claude?.checkedAt
-    ? `資料時間：${new Date(claude.checkedAt).toLocaleString()}\n來源：Claude Code status line（閒置時不更新）`
+    ? [
+        `/usage：${claudeTime(claude.cliCheckedAt)}`,
+        `status line 快照：${claudeTime(claude.snapshotCheckedAt)}`,
+        claude.liveRefreshFailed ? `/usage 查詢失敗：${claude.liveRefreshMessage}` : ''
+      ].filter(Boolean).join('\n')
     : '';
   if (!claude?.ok || (!claude.fiveHour && !claude.sevenDay)) {
     return `<div class="empty unavailable">${escapeHtml(claude?.message || '剩餘流量無法取得')}</div>`;

@@ -55,3 +55,9 @@ Claude live usage is read from `claude -p "/usage"`. The CLI can report `Current
 ## 2026-11-03 Claude Status Line 快照
 
 Claude 資料流改為：Claude Code status line stdin → `scripts/claude-statusline.js` → `~/.claude/rate-limit-snapshot.json` → `getClaudeStatusLineUsage()` → renderer。此流程取代上方關於 Claude CLI `/usage` 與 `api/oauth/usage` 的說明，不發送網路請求，也不讀取 token。Widget 約每 10 分鐘或按下重新整理時讀檔。
+
+快照更新時，主程序會透過 `fs.watch` 只刷新 Claude 區塊；每 10 分鐘的讀取與手動重新整理保留作為備援。
+
+## 2026-11-03 Claude /usage 與快照合併
+
+此段取代上方 Claude 只讀快照的說明。啟動、約每 10 分鐘與手動刷新執行 `claude -p /usage --no-session-persistence`；快照更新時沿用上一筆 `/usage` 重新合併。同一視窗取較高使用率，重置時間沿用 `/usage`；不同視窗取重置時間較晚者。

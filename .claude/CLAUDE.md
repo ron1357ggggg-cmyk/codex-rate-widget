@@ -50,7 +50,7 @@
 ## 手動刷新規則
 
 - 自動檢查約每 10 分鐘執行一次，資料來源必須與手動重新整理一致。
-- 啟動、手動按重新整理、系統列重新整理與自動檢查時，Codex 必須走 `src/codexLiveUsage.js` 的 app-server 即時查詢，Claude 必須走 `src/claudeLiveUsage.js` 的 `getClaudeStatusLineUsage()` 讀取 status line 快照，不輪詢 `api/oauth/usage`。
+- 啟動、手動按重新整理、系統列重新整理與自動檢查時，Codex 必須走 `src/codexLiveUsage.js` 的 app-server 即時查詢，Claude 必須走 `src/claudeLiveUsage.js` 的 `getClaudeCliUsage()` 查詢 `/usage`，再以 `mergeClaudeUsage()` 與 status line 快照合併，不輪詢 `api/oauth/usage`。
 - 不要用畫面座標、自動點擊或 OCR 讀 Codex／Claude 桌面版；即時資料應走程式介面。
 - Codex app-server 是 experimental，查詢失敗時若已有上一筆成功 live 值需先保留該值；沒有 live 值時才 fallback 到本機 LOG，並保留可見錯誤狀態與 diagnostics。
 
