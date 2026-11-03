@@ -51,3 +51,7 @@ Codex is local-first only when the local session LOG is not stale. If local LOG 
 ## 2026-08-10 Claude Current Session Parsing
 
 Claude live usage is read from `claude -p "/usage"`. The CLI can report `Current session: N% used` without a reset time, while weekly usage still reports `Current week (all models): N% used · resets ...`. The widget must parse and show the session percentage even when the reset text is missing. Claude's current-session row should be labeled `本次`, not `5 小時`, because the CLI no longer describes that value as a fixed 5-hour window.
+
+## 2026-11-03 Claude Status Line 快照
+
+Claude 資料流改為：Claude Code status line stdin → `scripts/claude-statusline.js` → `~/.claude/rate-limit-snapshot.json` → `getClaudeStatusLineUsage()` → renderer。此流程取代上方關於 Claude CLI `/usage` 與 `api/oauth/usage` 的說明，不發送網路請求，也不讀取 token。Widget 約每 10 分鐘或按下重新整理時讀檔。

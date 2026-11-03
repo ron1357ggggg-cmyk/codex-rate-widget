@@ -5,6 +5,7 @@ const path = require('path');
 const https = require('https');
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const SNAPSHOT_STALE_MS = 45 * 60 * 1000;
 
 function resolveClaudeCliPath() {
   const candidates = [
@@ -136,7 +137,13 @@ function getClaudeLiveUsage() {
           reject(new Error('Claude Code 登入失效，請執行 claude auth login'));
           return;
         }
-        if (response.statusCode !== 200) return reject(new Error(`Claude usage HTTP ${response.statusCode}`));
+        if (response.statusCode !== 200) {
+          const error = new Error(`Claude usage HTTP ${response.statusCode}`);
+          error.status = response.statusCode;
+          const retry = response.headers['retry-after'];
+          error.retryAfterMs = /^\d+$/.test(String(retry)) ? Number(retry) * 1000 : Math.max(0, Date.parse(retry) - Date.now()) || 0;
+          return reject(error);
+        }
         try {
           const data = JSON.parse(body);
           const normalize = (window) => {
@@ -157,4 +164,40 @@ function getClaudeLiveUsage() {
   });
 }
 
-module.exports = { getClaudeLiveUsage, parseClaudeUsageOutput, parseResetText, resolveClaudeCliPath };
+function claudeSnapshotPath() {
+  return process.env.CLAUDE_RATE_LIMIT_SNAPSHOT || path.join(os.homedir(), '.claude', 'rate-limit-snapshot.json');
+}
+
+function normalizeSnapshotWindow(window, now) {
+  if (!window || typeof window.used_percentage !== 'number' || !Number.isFinite(window.used_percentage)) return null;
+  const resetsAt = Number.isFinite(window.resets_at) ? window.resets_at * 1000 : null;
+  const usedPercent = Math.max(0, Math.min(100, window.used_percentage));
+  return { usedPercent, remainingPercent: Math.round((100 - usedPercent) * 10) / 10, resetsAt };
+}
+
+// 讀取 scripts/claude-statusline.js 寫出的快照，不發送任何網路請求。
+function getClaudeStatusLineUsage(now = Date.now()) {
+  let snapshot;
+  try {
+    snapshot = JSON.parse(fs.readFileSync(claudeSnapshotPath(), 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error('等待 Claude Code 回應後更新');
+    throw new Error(`Claude 用量快照無法讀取：${error.message}`);
+  }
+  const fiveHour = normalizeSnapshotWindow(snapshot.five_hour, now);
+  const sevenDay = normalizeSnapshotWindow(snapshot.seven_day, now);
+  if (!fiveHour && !sevenDay) throw new Error('Claude 用量快照沒有可用額度');
+  const updatedAt = Date.parse(snapshot.updatedAt);
+  return {
+    ok: true,
+    checkedAt: snapshot.updatedAt,
+    sourceType: 'claude-statusline',
+    sourcePath: claudeSnapshotPath(),
+    stale: !Number.isFinite(updatedAt) || now - updatedAt > SNAPSHOT_STALE_MS ||
+      [fiveHour, sevenDay].some((window) => window && window.resetsAt !== null && window.resetsAt <= now),
+    fiveHour,
+    sevenDay
+  };
+}
+
+module.exports = { getClaudeLiveUsage, getClaudeStatusLineUsage, parseClaudeUsageOutput, parseResetText, resolveClaudeCliPath };

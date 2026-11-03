@@ -221,6 +221,9 @@ function renderCodexContent(data) {
 }
 
 function renderClaudeContent(claude) {
+  claudeLimitsEl.title = claude?.checkedAt
+    ? `資料時間：${new Date(claude.checkedAt).toLocaleString()}\n來源：Claude Code status line（閒置時不更新）`
+    : '';
   if (!claude?.ok || (!claude.fiveHour && !claude.sevenDay)) {
     return `<div class="empty unavailable">${escapeHtml(claude?.message || '剩餘流量無法取得')}</div>`;
   }
@@ -233,7 +236,7 @@ function renderClaudeContent(claude) {
     const { remainingPercent, usedPercent, resetsAt } = claude.sevenDay;
     rows.push(limitPairHtml('1 週', remainingPercent, usedPercent, resetsAt, { forceDate: true }));
   }
-  return rows.join('');
+  return rows.join('') + (claude.stale ? `<div class="empty">待更新 ${escapeHtml(formatClock(claude.checkedAt))}</div>` : '');
 }
 
 function render(payload) {
@@ -259,7 +262,7 @@ function render(payload) {
       `Codex 路徑：${codex.sourcePath || '--'}`,
       `Codex 狀態：${codex.stale ? '尚未寫出新的 rate_limits snapshot' : '資料新鮮'}`,
       codex.liveRefreshFailed ? `Codex 即時查詢：${codex.liveRefreshMessage}` : 'Codex 即時查詢：成功或未要求',
-      `Claude 狀態：${claude?.ok ? '資料新鮮' : (claude?.message || '無法取得')}`,
+      `Claude 狀態：${claude?.ok ? (claude.stale ? '資料較舊' : '資料新鮮') : (claude?.message || '無法取得')}`,
       claude?.liveRefreshFailed ? `Claude 即時查詢：${claude.liveRefreshMessage}` : 'Claude 即時查詢：成功或未要求'
     ].join('\n');
   } else {

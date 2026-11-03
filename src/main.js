@@ -4,7 +4,7 @@ const path = require('path');
 const { readLatestRateLimits } = require('./rateLimits');
 const { getCodexLiveUsage } = require('./codexLiveUsage');
 const { getClaudeUsage, setClaudeUsageCache } = require('./claudeUsage');
-const { getClaudeLiveUsage } = require('./claudeLiveUsage');
+const { getClaudeStatusLineUsage } = require('./claudeLiveUsage');
 
 let mainWindow;
 let tray;
@@ -226,20 +226,15 @@ function summarizeCodexUsage(usage) {
 
 async function readClaudeUsage() {
   try {
-    const liveUsage = await getClaudeLiveUsage();
-    setClaudeUsageCache(liveUsage);
-    return liveUsage;
+    const usage = getClaudeStatusLineUsage();
+    setClaudeUsageCache(usage);
+    return usage;
   } catch (error) {
     writeDiagnostic('claude-live-refresh-error', {
       message: error?.message || String(error),
       stack: error?.stack || null
     });
-    const fallback = { ok: false, message: error?.message || 'Claude 用量取得失敗' };
-    return {
-      ...fallback,
-      liveRefreshFailed: true,
-      liveRefreshMessage: error?.message || String(error)
-    };
+    return { ok: false, message: error?.message || 'Claude 用量取得失敗' };
   }
 }
 

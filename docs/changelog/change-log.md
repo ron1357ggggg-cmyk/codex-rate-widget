@@ -288,3 +288,28 @@
 - Ran `node --check src\claudeLiveUsage.js` and `node --check src\renderer.js`.
 - Parsed a sample Claude CLI output with no current-session reset time.
 - Queried live Claude usage through `src/claudeLiveUsage.js`; it returned current session `remainingPercent: 100` and weekly `remainingPercent: 84`.
+
+## 2026-11-03 Claude 用量改用 status line 快照
+
+### 異動原因
+
+`api/oauth/usage` 持續回傳 HTTP 429 或登入失效，Widget 無法顯示 Claude 用量。
+
+### 異動內容
+
+- 新增 `scripts/claude-statusline.js`，把 `rate_limits` 寫到 `~/.claude/rate-limit-snapshot.json`，並輸出一行狀態文字。
+- 新增 `getClaudeStatusLineUsage()`；`readClaudeUsage()` 改為讀取快照，移除同日未提交的 429 冷卻邏輯。
+- 快照超過 45 分鐘或過了重置時間顯示「待更新」，保留原值，不推算為剩餘 100%。
+- 全域 `~/.claude/settings.json` 新增 `statusLine`（不在本 repo 內）。
+
+### 異動檔案
+
+`scripts/claude-statusline.js`、`src/claudeLiveUsage.js`、`src/main.js`、`src/renderer.js`、`README.md`、`.claude/CLAUDE.md`、`docs/`
+
+### 測試方式
+
+語法檢查、以測試資料驗證腳本與讀取邏輯，並重啟 Widget 比對畫面與實際快照。
+
+### 風險評估
+
+Claude Code 閒置時資料不會更新，其他裝置的用量會延遲反映。設定 status line 後，Claude Code 底部會少掉大部分快捷鍵提示。移動專案資料夾後需同步修改 `statusLine` 路徑。

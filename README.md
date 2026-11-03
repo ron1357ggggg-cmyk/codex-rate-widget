@@ -6,13 +6,13 @@
 - 5 小時剩餘百分比與恢復時間
 - 1 週剩餘百分比與恢復時間
 
-**Claude**（透過 Claude Code OAuth token 查詢用量）
+**Claude**（讀取 Claude Code status line 寫出的本機快照）
 - Session 剩餘百分比與重置時間
 - 每週剩餘百分比與重置時間
 
 共同特性：可拖曳移動、置頂、可縮到系統列、約每 10 分鐘自動重新整理。
 
-Widget 啟動、自動重新整理、系統列重新整理與按下標題列重新整理按鈕時，都會執行即時查詢：Codex 透過本機 `codex app-server` 取得帳戶最新用量，Claude 透過本機 Claude Code CLI 的 `/usage` 取得訂閱用量。這可反映同一帳戶在其他電腦產生的使用量，不需要開啟或切換 Codex、Claude 桌面視窗。
+Widget 啟動、自動重新整理、系統列重新整理與按下標題列重新整理按鈕時：Codex 透過本機 `codex app-server` 取得帳戶最新用量，可反映其他電腦的使用量；Claude 重新讀取本機快照，不發送網路請求。
 
 ## 執行
 
@@ -39,14 +39,23 @@ npm.cmd start
 
 ## 資料來源：Claude
 
-Claude 區塊透過 Claude Code CLI 的 OAuth token 向 `api.anthropic.com/v1/messages` 發送最小 API 呼叫，從回應標頭取得即時用量資料：
+Claude Code 更新 status line 時會執行 `scripts/claude-statusline.js`，把 `rate_limits` 的 5 小時與 7 天使用率存到 `%USERPROFILE%\.claude\rate-limit-snapshot.json`（可用 `CLAUDE_RATE_LIMIT_SNAPSHOT` 改路徑）。Widget 只讀這個檔案，不查詢網路，也不讀取 token。
 
-- `anthropic-ratelimit-unified-5h-utilization` → 5 小時視窗已使用比例（0–1）
-- `anthropic-ratelimit-unified-7d-utilization` → 7 天視窗已使用比例（0–1）
+需要在 `~/.claude/settings.json` 設定：
 
-Widget 以 `100 - 使用%` 顯示剩餘量，並附上各視窗的重置時間。啟動、自動檢查與手動刷新都讀 Claude CLI `/usage`；背景自動檢查約每 10 分鐘執行一次，避免過度呼叫 CLI。可用 `CLAUDE_CLI_PATH` 指定 Claude CLI 執行檔。
+```json
+"statusLine": {
+  "type": "command",
+  "command": "node \"C:/Users/ron_li/Desktop/TOOLS/codex-rate-widget/scripts/claude-statusline.js\""
+}
+```
 
-Token 存放位置：`%USERPROFILE%\.claude\.credentials.json`（由 Claude Code 自動管理）。
+限制：
+
+- 只支援 claude.ai 訂閱帳號，且工作階段收到第一個 API 回應後才有資料。
+- Claude Code 閒置時快照不會更新；超過 45 分鐘或已過重置時間會顯示「待更新」，保留快照原值，不推算成剩餘 100%。
+- 其他裝置的用量，要等這台的工作階段收到新回應才會反映。
+- 移動本專案資料夾後，要同步修改上面的路徑。
 
 ## 視窗位置
 

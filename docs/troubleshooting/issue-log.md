@@ -304,3 +304,31 @@ The parser now accepts Claude current-session and weekly lines with optional res
 ### Verification
 
 Ran syntax checks for `src/claudeLiveUsage.js` and `src/renderer.js`. Parsed both a sample CLI output and the live `claude -p "/usage"` output; both returned a valid current-session row with `remainingPercent: 100` and `resetsAt: null`.
+
+## 2026-11-03 Claude 用量抓不到（HTTP 429 與登入失效交替）
+
+### 問題現象
+
+Widget 的 Claude 區塊顯示「Claude 查詢限流，等待重試」或「登入失效」，沒有百分比，重啟也無法恢復。
+
+### 原因分析
+
+自 2026-11-02 09:14 起，`api/oauth/usage` 的查詢全數失敗，HTTP 429 與「登入失效」交替出現，每段 429 約持續 1 小時。429 的冷卻時間已寫入檔案，所以重啟無效；當時也沒有成功紀錄可顯示。此外 Widget 不會自行更新 access token，且 401、403 共用同一訊息，log 未記狀態碼。
+
+未確認：429 的實際觸發原因與門檻、「登入失效」是 401 還是 403。8 小時的 token 效期解釋不了 11/02 約每 1 小時重複出現的登入失效。
+
+### 解決方式
+
+改用 Claude Code status line 提供的 `rate_limits`：`scripts/claude-statusline.js` 寫出本機快照，Widget 只讀檔，不再呼叫 `api/oauth/usage`。
+
+### 影響範圍
+
+Claude 區塊的資料來源。Codex 區塊不受影響。
+
+### 後續注意事項
+
+Claude Code 閒置時快照不會更新，其他裝置的用量也不會立即反映。`getClaudeLiveUsage()` 仍保留但已無呼叫端，`claude-usage-state.json` 也不再使用。
+
+### 驗證
+
+`node --check` 全數通過；以測試資料驗證腳本與讀取邏輯（完整資料、缺 `rate_limits`、已過重置時間、超過 45 分鐘、檔案不存在）。重啟 Widget 後，實際快照的使用率 21%／38% 在畫面上顯示為剩餘 79%／62%，重置時間 14:20 與 11/5 14:00 也正確，且未再出現 Claude 錯誤。
